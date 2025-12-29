@@ -48,7 +48,7 @@ class GreetingHeaderWidget extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '${_getGreeting()}, $userName',
+              _getGreeting(),
               style: theme.textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.w700,
                 color: theme.colorScheme.onSurface,

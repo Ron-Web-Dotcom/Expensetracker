@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 /// Splash screen that provides branded app launch experience
 /// Handles initialization of financial data services and authentication status
@@ -119,18 +118,7 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   void _navigateToNextScreen() async {
-    final prefs = await SharedPreferences.getInstance();
-    final bool isAuthenticated = prefs.getBool('is_authenticated') ?? false;
-    final bool isFirstTime = prefs.getBool('is_first_time') ?? true;
-
-    if (isFirstTime) {
-      await prefs.setBool('is_first_time', false);
-      Navigator.pushReplacementNamed(context, '/signup');
-    } else if (isAuthenticated) {
-      Navigator.pushReplacementNamed(context, '/expense-dashboard');
-    } else {
-      Navigator.pushReplacementNamed(context, '/login');
-    }
+    Navigator.pushReplacementNamed(context, '/onboarding');
   }
 
   void _showRecoveryOptions() {
@@ -143,7 +131,7 @@ class _SplashScreenState extends State<SplashScreen>
           style: Theme.of(context).textTheme.titleLarge,
         ),
         content: Text(
-          'Unable to initialize the app. Would you like to try again or restore from backup?',
+          'Unable to initialize the app. Would you like to try again?',
           style: Theme.of(context).textTheme.bodyMedium,
         ),
         actions: [
@@ -157,10 +145,9 @@ class _SplashScreenState extends State<SplashScreen>
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              // Navigate to recovery screen
-              Navigator.pushReplacementNamed(context, '/settings');
+              Navigator.pushReplacementNamed(context, '/expense-dashboard');
             },
-            child: const Text('Restore Backup'),
+            child: const Text('Continue'),
           ),
         ],
       ),

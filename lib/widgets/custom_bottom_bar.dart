@@ -55,10 +55,10 @@ class CustomBottomBar extends StatelessWidget {
       label: 'Analytics',
     ),
     const CustomBottomBarItem(
-      route: '/settings',
-      icon: Icons.settings_outlined,
-      activeIcon: Icons.settings,
-      label: 'Settings',
+      route: '/budget-management',
+      icon: Icons.account_balance_wallet_outlined,
+      activeIcon: Icons.account_balance_wallet,
+      label: 'Budget',
     ),
   ];
 

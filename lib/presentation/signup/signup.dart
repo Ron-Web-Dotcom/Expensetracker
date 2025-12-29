@@ -150,28 +150,33 @@ class _SignupState extends State<Signup> {
   Widget _buildNameField(ThemeData theme) {
     return TextFormField(
       controller: _nameController,
-      style: const TextStyle(
-        color: Color(0xFF212121),
-        fontSize: 16,
-        fontWeight: FontWeight.w400,
+      style: TextStyle(
+        color: const Color(0xFF000000),
+        fontSize: 16.sp,
+        fontWeight: FontWeight.w500,
+        height: 1.5,
       ),
       decoration: InputDecoration(
         labelText: 'Full Name',
         hintText: 'Enter your full name',
-        labelStyle: const TextStyle(color: Color(0xFF757575), fontSize: 14),
-        hintStyle: const TextStyle(color: Color(0xFFBDBDBD), fontSize: 14),
-        prefixIcon: const Icon(
+        labelStyle: TextStyle(
+          color: const Color(0xFF424242),
+          fontSize: 14.sp,
+          fontWeight: FontWeight.w500,
+        ),
+        hintStyle: TextStyle(color: const Color(0xFF9E9E9E), fontSize: 14.sp),
+        prefixIcon: Icon(
           Icons.person_outline,
-          color: Color(0xFF757575),
-          size: 22,
+          color: const Color(0xFF424242),
+          size: 24.sp,
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFE0E0E0), width: 1),
+          borderSide: const BorderSide(color: Color(0xFF9E9E9E), width: 2),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFE0E0E0), width: 1),
+          borderSide: const BorderSide(color: Color(0xFF9E9E9E), width: 2),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -179,18 +184,15 @@ class _SignupState extends State<Signup> {
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.red, width: 1),
+          borderSide: const BorderSide(color: Colors.red, width: 2),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: Colors.red, width: 2),
         ),
         filled: true,
-        fillColor: const Color(0xFFFAFAFA),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 20,
-        ),
+        fillColor: Colors.white,
+        contentPadding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.5.h),
       ),
       textInputAction: TextInputAction.next,
       validator: (value) {
@@ -209,28 +211,33 @@ class _SignupState extends State<Signup> {
     return TextFormField(
       controller: _emailController,
       keyboardType: TextInputType.emailAddress,
-      style: const TextStyle(
-        color: Color(0xFF212121),
-        fontSize: 16,
-        fontWeight: FontWeight.w400,
+      style: TextStyle(
+        color: const Color(0xFF000000),
+        fontSize: 16.sp,
+        fontWeight: FontWeight.w500,
+        height: 1.5,
       ),
       decoration: InputDecoration(
         labelText: 'Email',
         hintText: 'Enter your email',
-        labelStyle: const TextStyle(color: Color(0xFF757575), fontSize: 14),
-        hintStyle: const TextStyle(color: Color(0xFFBDBDBD), fontSize: 14),
-        prefixIcon: const Icon(
+        labelStyle: TextStyle(
+          color: const Color(0xFF424242),
+          fontSize: 14.sp,
+          fontWeight: FontWeight.w500,
+        ),
+        hintStyle: TextStyle(color: const Color(0xFF9E9E9E), fontSize: 14.sp),
+        prefixIcon: Icon(
           Icons.email_outlined,
-          color: Color(0xFF757575),
-          size: 22,
+          color: const Color(0xFF424242),
+          size: 24.sp,
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFE0E0E0), width: 1),
+          borderSide: const BorderSide(color: Color(0xFF9E9E9E), width: 2),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFE0E0E0), width: 1),
+          borderSide: const BorderSide(color: Color(0xFF9E9E9E), width: 2),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -238,18 +245,15 @@ class _SignupState extends State<Signup> {
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.red, width: 1),
+          borderSide: const BorderSide(color: Colors.red, width: 2),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: Colors.red, width: 2),
         ),
         filled: true,
-        fillColor: const Color(0xFFFAFAFA),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 20,
-        ),
+        fillColor: Colors.white,
+        contentPadding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.5.h),
       ),
       textInputAction: TextInputAction.next,
       validator: (value) {
@@ -269,26 +273,33 @@ class _SignupState extends State<Signup> {
     return TextFormField(
       controller: _passwordController,
       obscureText: !_isPasswordVisible,
-      style: const TextStyle(
-        color: Color(0xFF212121),
-        fontSize: 16,
-        fontWeight: FontWeight.w400,
+      obscuringCharacter: '●',
+      style: TextStyle(
+        color: const Color(0xFF000000),
+        fontSize: 16.sp,
+        fontWeight: FontWeight.w500,
+        height: 1.5,
+        letterSpacing: 2.0,
       ),
       decoration: InputDecoration(
         labelText: 'Password',
         hintText: 'Enter your password',
-        labelStyle: const TextStyle(color: Color(0xFF757575), fontSize: 14),
-        hintStyle: const TextStyle(color: Color(0xFFBDBDBD), fontSize: 14),
-        prefixIcon: const Icon(
+        labelStyle: TextStyle(
+          color: const Color(0xFF424242),
+          fontSize: 14.sp,
+          fontWeight: FontWeight.w500,
+        ),
+        hintStyle: TextStyle(color: const Color(0xFF9E9E9E), fontSize: 14.sp),
+        prefixIcon: Icon(
           Icons.lock_outline,
-          color: Color(0xFF757575),
-          size: 22,
+          color: const Color(0xFF424242),
+          size: 24.sp,
         ),
         suffixIcon: IconButton(
           icon: Icon(
             _isPasswordVisible ? Icons.visibility_off : Icons.visibility,
-            color: const Color(0xFF757575),
-            size: 22,
+            color: const Color(0xFF424242),
+            size: 24.sp,
           ),
           onPressed: () {
             setState(() => _isPasswordVisible = !_isPasswordVisible);
@@ -296,11 +307,11 @@ class _SignupState extends State<Signup> {
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFE0E0E0), width: 1),
+          borderSide: const BorderSide(color: Color(0xFF9E9E9E), width: 2),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFE0E0E0), width: 1),
+          borderSide: const BorderSide(color: Color(0xFF9E9E9E), width: 2),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -308,22 +319,19 @@ class _SignupState extends State<Signup> {
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.red, width: 1),
+          borderSide: const BorderSide(color: Colors.red, width: 2),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: Colors.red, width: 2),
         ),
         filled: true,
-        fillColor: const Color(0xFFFAFAFA),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 20,
-        ),
+        fillColor: Colors.white,
+        contentPadding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.5.h),
       ),
       textInputAction: TextInputAction.next,
       validator: (value) {
-        if (value == null || value.isEmpty) {
+        if (value == null || value.trim().isEmpty) {
           return 'Please enter your password';
         }
         if (value.length < 6) {
@@ -338,26 +346,33 @@ class _SignupState extends State<Signup> {
     return TextFormField(
       controller: _confirmPasswordController,
       obscureText: !_isConfirmPasswordVisible,
-      style: const TextStyle(
-        color: Color(0xFF212121),
-        fontSize: 16,
-        fontWeight: FontWeight.w400,
+      obscuringCharacter: '●',
+      style: TextStyle(
+        color: const Color(0xFF000000),
+        fontSize: 16.sp,
+        fontWeight: FontWeight.w500,
+        height: 1.5,
+        letterSpacing: 2.0,
       ),
       decoration: InputDecoration(
         labelText: 'Confirm Password',
         hintText: 'Re-enter your password',
-        labelStyle: const TextStyle(color: Color(0xFF757575), fontSize: 14),
-        hintStyle: const TextStyle(color: Color(0xFFBDBDBD), fontSize: 14),
-        prefixIcon: const Icon(
+        labelStyle: TextStyle(
+          color: const Color(0xFF424242),
+          fontSize: 14.sp,
+          fontWeight: FontWeight.w500,
+        ),
+        hintStyle: TextStyle(color: const Color(0xFF9E9E9E), fontSize: 14.sp),
+        prefixIcon: Icon(
           Icons.lock_outline,
-          color: Color(0xFF757575),
-          size: 22,
+          color: const Color(0xFF424242),
+          size: 24.sp,
         ),
         suffixIcon: IconButton(
           icon: Icon(
             _isConfirmPasswordVisible ? Icons.visibility_off : Icons.visibility,
-            color: const Color(0xFF757575),
-            size: 22,
+            color: const Color(0xFF424242),
+            size: 24.sp,
           ),
           onPressed: () {
             setState(
@@ -367,11 +382,11 @@ class _SignupState extends State<Signup> {
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFE0E0E0), width: 1),
+          borderSide: const BorderSide(color: Color(0xFF9E9E9E), width: 2),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFE0E0E0), width: 1),
+          borderSide: const BorderSide(color: Color(0xFF9E9E9E), width: 2),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -379,21 +394,17 @@ class _SignupState extends State<Signup> {
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.red, width: 1),
+          borderSide: const BorderSide(color: Colors.red, width: 2),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: Colors.red, width: 2),
         ),
         filled: true,
-        fillColor: const Color(0xFFFAFAFA),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 20,
-        ),
+        fillColor: Colors.white,
+        contentPadding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.5.h),
       ),
       textInputAction: TextInputAction.done,
-      onFieldSubmitted: (_) => _handleSignup(),
       validator: (value) {
         if (value == null || value.isEmpty) {
           return 'Please confirm your password';
