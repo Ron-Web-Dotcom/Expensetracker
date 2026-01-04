@@ -39,7 +39,7 @@ class QuickActionsWidget extends StatelessWidget {
         ),
         SizedBox(height: 1.5.h),
         SizedBox(
-          height: 120,
+          height: 160,
           child: ListView(
             scrollDirection: Axis.horizontal,
             padding: EdgeInsets.symmetric(horizontal: 4.w),

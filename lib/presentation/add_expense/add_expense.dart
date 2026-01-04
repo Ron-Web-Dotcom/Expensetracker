@@ -7,6 +7,7 @@ import '../../widgets/custom_icon_widget.dart';
 import '../../services/analytics_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/settings_service.dart';
+import '../../services/expense_data_service.dart';
 import './widgets/amount_input_widget.dart';
 import './widgets/category_selector_widget.dart';
 import './widgets/date_picker_widget.dart';
@@ -15,6 +16,7 @@ import './widgets/location_toggle_widget.dart';
 import './widgets/payment_method_widget.dart';
 import './widgets/receipt_attachment_widget.dart';
 import './widgets/animated_background_widget.dart';
+import './widgets/transaction_type_toggle_widget.dart';
 
 class AddExpense extends StatefulWidget {
   const AddExpense({super.key});
@@ -27,6 +29,7 @@ class _AddExpenseState extends State<AddExpense> {
   final AnalyticsService _analytics = AnalyticsService();
   final NotificationService _notificationService = NotificationService();
   final SettingsService _settingsService = SettingsService();
+  final ExpenseDataService _expenseDataService = ExpenseDataService();
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
@@ -42,11 +45,61 @@ class _AddExpenseState extends State<AddExpense> {
   String? _categoryError;
   String? _descriptionError;
 
+  bool _isEditMode = false;
+  String? _editingTransactionId;
+  String _transactionType = 'expense'; // 'expense' or 'income'
+
   @override
   void initState() {
     super.initState();
     _analytics.trackScreenView('add_expense');
     _loadDefaultCategory();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final args =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+
+    if (args != null) {
+      // Set transaction type
+      if (args['transactionType'] != null && _transactionType == 'expense') {
+        _transactionType = args['transactionType'] as String;
+      }
+
+      // Handle edit mode
+      if (args['isEdit'] == true && !_isEditMode) {
+        _isEditMode = true;
+        _editingTransactionId = args['transactionId'] as String?;
+        _transactionType = args['transactionType'] as String? ?? 'expense';
+
+        final amount = args['amount'];
+        if (amount is double) {
+          _amountController.text = amount.abs().toStringAsFixed(2);
+        } else if (amount is num) {
+          _amountController.text = amount.toDouble().abs().toStringAsFixed(2);
+        }
+
+        _selectedCategory = args['category'] as String?;
+        _descriptionController.text = args['description'] as String? ?? '';
+
+        final date = args['date'];
+        if (date is DateTime) {
+          _selectedDate = date;
+        } else if (date is String) {
+          _selectedDate = DateTime.parse(date);
+        } else {
+          _selectedDate = DateTime.now();
+        }
+
+        _selectedPaymentMethod = args['paymentMethod'] as String? ?? 'Cash';
+        _receiptPhotos = List<String>.from(
+          args['receiptPhotos'] as List? ?? [],
+        );
+        setState(() {});
+      }
+    }
   }
 
   Future<void> _loadDefaultCategory() async {
@@ -116,6 +169,7 @@ class _AddExpenseState extends State<AddExpense> {
   bool get _canSave {
     return _amountController.text.isNotEmpty &&
         _selectedCategory != null &&
+        _descriptionController.text.trim().isNotEmpty &&
         !_isSaving;
   }
 
@@ -125,6 +179,16 @@ class _AddExpenseState extends State<AddExpense> {
       _categoryError = null;
     });
     _analytics.trackFeatureUsage('category_selected');
+  }
+
+  void _handleTransactionTypeChanged(String type) {
+    setState(() {
+      _transactionType = type;
+      // Reset category when switching types to avoid invalid category for the new type
+      _selectedCategory = null;
+      _categoryError = null;
+    });
+    _analytics.trackFeatureUsage('transaction_type_changed');
   }
 
   void _handleDateSelected(DateTime date) {
@@ -197,9 +261,33 @@ class _AddExpenseState extends State<AddExpense> {
     setState(() => _isSaving = true);
     HapticFeedback.mediumImpact();
 
+    // Clean and parse amount safely
+    final cleanAmount = _amountController.text.replaceAll(',', '').trim();
+    final expenseAmount = double.tryParse(cleanAmount);
+
+    if (expenseAmount == null) {
+      setState(() {
+        _isSaving = false;
+        _amountError = 'Invalid amount format';
+      });
+      return;
+    }
+
+    // Save expense to local storage
+    await _expenseDataService.saveExpense(
+      amount: expenseAmount,
+      category: _selectedCategory!,
+      date: _selectedDate,
+      paymentMethod: _selectedPaymentMethod,
+      description: _descriptionController.text.trim(),
+      receiptPhotos: _receiptPhotos,
+      hasLocation: _enableLocation,
+      transactionType: _transactionType,
+    );
+
     // Track expense addition
     await _analytics.trackExpenseAdded(
-      amount: double.parse(_amountController.text),
+      amount: expenseAmount,
       category: _selectedCategory!,
       paymentMethod: _selectedPaymentMethod,
     );
@@ -213,9 +301,6 @@ class _AddExpenseState extends State<AddExpense> {
 
     // Check budget alerts after adding expense
     await _checkBudgetAlertsAfterExpense();
-
-    // Simulate save operation
-    await Future.delayed(const Duration(milliseconds: 800));
 
     if (!mounted) return;
 
@@ -235,7 +320,7 @@ class _AddExpenseState extends State<AddExpense> {
     );
 
     // Navigate back to dashboard
-    Navigator.pop(context);
+    Navigator.pushReplacementNamed(context, '/expense-dashboard');
   }
 
   Future<void> _checkBudgetAlertsAfterExpense() async {
@@ -315,7 +400,7 @@ class _AddExpenseState extends State<AddExpense> {
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
-                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/expense-dashboard');
               },
               child: Text(
                 'Discard',
@@ -326,8 +411,21 @@ class _AddExpenseState extends State<AddExpense> {
         ),
       );
     } else {
-      Navigator.pop(context);
+      Navigator.pushReplacementNamed(context, '/expense-dashboard');
     }
+  }
+
+  Color get _primaryColor {
+    return _transactionType == 'income'
+        ? const Color(0xFF4CAF50) // Green for income
+        : const Color(0xFFEF5350); // Red for expense
+  }
+
+  String get _screenTitle {
+    if (_isEditMode) {
+      return _transactionType == 'income' ? 'Edit Income' : 'Edit Expense';
+    }
+    return _transactionType == 'income' ? 'Add Income' : 'Add Expense';
   }
 
   @override
@@ -338,8 +436,8 @@ class _AddExpenseState extends State<AddExpense> {
       backgroundColor: theme.colorScheme.surface,
       body: Stack(
         children: [
-          // Animated Background
-          const AnimatedBackgroundWidget(),
+          // Animated Background with dynamic color
+          AnimatedBackgroundWidget(color: _primaryColor),
 
           // Main Content
           SafeArea(
@@ -359,12 +457,25 @@ class _AddExpenseState extends State<AddExpense> {
                         onPressed: _handleCancel,
                       ),
                       Expanded(
-                        child: Text(
-                          'Add Expense',
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                          textAlign: TextAlign.center,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            CustomIconWidget(
+                              iconName: _transactionType == 'income'
+                                  ? 'trending_up'
+                                  : 'trending_down',
+                              color: _primaryColor,
+                              size: 24,
+                            ),
+                            SizedBox(width: 2.w),
+                            Text(
+                              _screenTitle,
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: _primaryColor,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       TextButton(
@@ -373,9 +484,9 @@ class _AddExpenseState extends State<AddExpense> {
                           'Save',
                           style: theme.textTheme.titleMedium?.copyWith(
                             color: _canSave
-                                ? theme.colorScheme.primary
-                                : theme.colorScheme.onSurfaceVariant.withValues(
-                                    alpha: 0.4,
+                                ? _primaryColor
+                                : theme.colorScheme.onSurface.withValues(
+                                    alpha: 0.5,
                                   ),
                             fontWeight: FontWeight.w600,
                           ),
@@ -398,6 +509,19 @@ class _AddExpenseState extends State<AddExpense> {
                           children: [
                             SizedBox(height: 2.h),
 
+                            // Transaction Type Toggle (only show if not in edit mode)
+                            if (!_isEditMode)
+                              Column(
+                                children: [
+                                  TransactionTypeToggleWidget(
+                                    selectedType: _transactionType,
+                                    onTypeChanged:
+                                        _handleTransactionTypeChanged,
+                                  ),
+                                  SizedBox(height: 3.h),
+                                ],
+                              ),
+
                             // Amount Input
                             AmountInputWidget(
                               controller: _amountController,
@@ -407,6 +531,7 @@ class _AddExpenseState extends State<AddExpense> {
                                   _amountError = null;
                                 });
                               },
+                              transactionType: _transactionType,
                             ),
 
                             SizedBox(height: 3.h),
@@ -416,6 +541,7 @@ class _AddExpenseState extends State<AddExpense> {
                               selectedCategory: _selectedCategory,
                               onCategorySelected: _handleCategorySelected,
                               errorText: _categoryError,
+                              transactionType: _transactionType,
                             ),
 
                             SizedBox(height: 3.h),
@@ -432,6 +558,11 @@ class _AddExpenseState extends State<AddExpense> {
                             DescriptionInputWidget(
                               controller: _descriptionController,
                               errorText: _descriptionError,
+                              onChanged: (value) {
+                                setState(() {
+                                  _descriptionError = null;
+                                });
+                              },
                             ),
 
                             SizedBox(height: 3.h),

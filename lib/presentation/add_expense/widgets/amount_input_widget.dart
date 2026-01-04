@@ -1,67 +1,101 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sizer/sizer.dart';
+import 'package:intl/intl.dart';
+
+class CurrencyInputFormatter extends TextInputFormatter {
+  final NumberFormat _formatter = NumberFormat('#,##0.00', 'en_US');
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    if (newValue.text.isEmpty) {
+      return newValue.copyWith(text: '');
+    }
+
+    // Remove all non-digit characters
+    String digitsOnly = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+
+    if (digitsOnly.isEmpty) {
+      return const TextEditingValue(text: '');
+    }
+
+    // Convert to double (treating last 2 digits as cents)
+    double value = double.parse(digitsOnly) / 100;
+
+    // Format with commas and decimal places
+    String formatted = _formatter.format(value);
+
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+}
 
 class AmountInputWidget extends StatelessWidget {
   final TextEditingController controller;
-  final ValueChanged<String>? onChanged;
   final String? errorText;
+  final ValueChanged<String>? onChanged;
+  final String transactionType;
 
   const AmountInputWidget({
     super.key,
     required this.controller,
-    this.onChanged,
     this.errorText,
+    this.onChanged,
+    this.transactionType = 'expense',
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final hasError = errorText != null;
+    final primaryColor = transactionType == 'income'
+        ? const Color(0xFF4CAF50)
+        : theme.colorScheme.error;
 
-    return Container(
-      padding: EdgeInsets.all(4.w),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface.withValues(alpha: 0.9),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: hasError
-              ? theme.colorScheme.error
-              : theme.colorScheme.outline.withValues(alpha: 0.3),
-          width: hasError ? 2 : 1,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Amount *',
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: hasError ? theme.colorScheme.error : null,
+          ),
         ),
-        boxShadow: hasError
-            ? [
-                BoxShadow(
-                  color: theme.colorScheme.error.withValues(alpha: 0.2),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ]
-            : null,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Amount',
-            style: theme.textTheme.labelLarge?.copyWith(
+        SizedBox(height: 1.5.h),
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface.withValues(alpha: 0.9),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
               color: hasError
                   ? theme.colorScheme.error
-                  : theme.colorScheme.onSurfaceVariant,
+                  : theme.colorScheme.outline.withValues(alpha: 0.3),
+              width: hasError ? 2 : 1,
             ),
+            boxShadow: hasError
+                ? [
+                    BoxShadow(
+                      color: theme.colorScheme.error.withValues(alpha: 0.2),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : null,
           ),
-          SizedBox(height: 1.h),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
+          child: Row(
             children: [
               Text(
                 '\$',
-                style: theme.textTheme.headlineLarge?.copyWith(
-                  color: hasError
-                      ? theme.colorScheme.error
-                      : theme.colorScheme.primary,
+                style: theme.textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.w700,
+                  color: primaryColor,
                 ),
               ),
               SizedBox(width: 2.w),
@@ -71,53 +105,38 @@ class AmountInputWidget extends StatelessWidget {
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
                   ),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(
-                      RegExp(r'^\d+\.?\d{0,2}'),
-                    ),
-                  ],
-                  style: theme.textTheme.headlineLarge?.copyWith(
-                    color: theme.colorScheme.onSurface,
+                  style: theme.textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.w700,
+                    color: theme.colorScheme.onSurface,
                   ),
                   decoration: InputDecoration(
                     hintText: '0.00',
-                    hintStyle: theme.textTheme.headlineLarge?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant.withValues(
-                        alpha: 0.3,
-                      ),
+                    hintStyle: theme.textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.w700,
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
                     ),
                     border: InputBorder.none,
                     contentPadding: EdgeInsets.zero,
                   ),
+                  inputFormatters: [CurrencyInputFormatter()],
                   onChanged: onChanged,
                 ),
               ),
             ],
           ),
-          if (hasError) SizedBox(height: 1.h),
-          if (hasError)
-            Row(
-              children: [
-                Icon(
-                  Icons.error_outline,
-                  size: 16,
-                  color: theme.colorScheme.error,
-                ),
-                SizedBox(width: 1.w),
-                Expanded(
-                  child: Text(
-                    errorText!,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.error,
-                    ),
-                  ),
-                ),
-              ],
+        ),
+        if (hasError) SizedBox(height: 1.h),
+        if (hasError)
+          Padding(
+            padding: EdgeInsets.only(left: 2.w),
+            child: Text(
+              errorText!,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.error,
+              ),
             ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 }

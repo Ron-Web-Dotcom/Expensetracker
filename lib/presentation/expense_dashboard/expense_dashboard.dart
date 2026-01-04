@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sizer/sizer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/intl.dart';
 
 import '../../core/app_export.dart';
 import '../../widgets/custom_app_bar.dart';
@@ -10,6 +11,8 @@ import '../../widgets/custom_icon_widget.dart';
 import '../../services/analytics_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/settings_service.dart';
+import '../../services/expense_data_service.dart';
+import '../../services/expense_notifier.dart';
 import './widgets/greeting_header_widget.dart';
 import './widgets/monthly_spending_card_widget.dart';
 import './widgets/quick_actions_widget.dart';
@@ -28,6 +31,8 @@ class _ExpenseDashboardState extends State<ExpenseDashboard> {
   final AnalyticsService _analytics = AnalyticsService();
   final NotificationService _notificationService = NotificationService();
   final SettingsService _settingsService = SettingsService();
+  final ExpenseDataService _expenseDataService = ExpenseDataService();
+  final ExpenseNotifier _expenseNotifier = ExpenseNotifier();
   bool _isBalanceVisible = true;
   bool _isRefreshing = false;
   final ScrollController _scrollController = ScrollController();
@@ -36,11 +41,27 @@ class _ExpenseDashboardState extends State<ExpenseDashboard> {
   // Mock data for dashboard - starts empty
   final Map<String, dynamic> _dashboardData = {
     "userName": "User",
-    "currentDate": "December 28, 2025",
+    "currentDate": DateFormat('MMMM d, y').format(DateTime.now()),
     "monthlySpending": 0.0,
-    "monthlyBudget": 3500.00,
+    "monthlyBudget": 0.0,
     "spendingPercentage": 0.0,
     "recentTransactions": [],
+  };
+
+  // Category icon mapping
+  final Map<String, String> _categoryIcons = {
+    'Food & Dining': 'restaurant',
+    'Transportation': 'directions_car',
+    'Shopping': 'shopping_bag',
+    'Entertainment': 'movie',
+    'Bills & Utilities': 'receipt_long',
+    'Healthcare': 'local_hospital',
+    'Education': 'school',
+    'Travel': 'flight',
+    'Groceries': 'shopping_cart',
+    'Personal Care': 'face',
+    'Gifts & Donations': 'card_giftcard',
+    'Other': 'more_horiz',
   };
 
   @override
@@ -49,7 +70,70 @@ class _ExpenseDashboardState extends State<ExpenseDashboard> {
     _analytics.trackScreenView('expense_dashboard');
     _analytics.trackSessionStart();
     _loadUserName();
+    _loadDashboardData();
     _checkWeeklySummary();
+
+    // Listen for real-time data changes
+    _expenseNotifier.addListener(_onDataChanged);
+  }
+
+  void _onDataChanged() {
+    // Reload dashboard data when expenses or budgets change
+    if (mounted) {
+      _loadDashboardData();
+    }
+  }
+
+  Future<void> _loadDashboardData() async {
+    final now = DateTime.now();
+    final startOfMonth = DateTime(now.year, now.month, 1);
+    final endOfMonth = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
+
+    final monthlySpending = await _expenseDataService.getTotalSpending(
+      startDate: startOfMonth,
+      endDate: endOfMonth,
+    );
+
+    final recentExpenses = await _expenseDataService.getExpensesByDateRange(
+      startDate: startOfMonth,
+      endDate: endOfMonth,
+    );
+
+    // Sort by date descending and take top 5
+    recentExpenses.sort(
+      (a, b) => DateTime.parse(b['date']).compareTo(DateTime.parse(a['date'])),
+    );
+    final recentTransactions = recentExpenses.take(5).map((expense) {
+      final expenseDate = DateTime.parse(expense['date']);
+      final category = expense['category'] as String;
+      final amount = (expense['amount'] as num).toDouble();
+      return {
+        'id': expense['id'],
+        'description': expense['description'] ?? 'Expense',
+        'amount': amount,
+        'category': category,
+        'categoryIcon': _categoryIcons[category] ?? 'more_horiz',
+        'date': expense['date'],
+        'time': DateFormat('h:mm a').format(expenseDate),
+        'paymentMethod': expense['paymentMethod'],
+        'hasReceipt': (expense['receiptPhotos'] as List).isNotEmpty,
+        'receiptPhotos': expense['receiptPhotos'],
+        'hasLocation': expense['hasLocation'] ?? false,
+        'transactionType':
+            expense['transactionType'] ?? (amount > 0 ? 'income' : 'expense'),
+      };
+    }).toList();
+
+    if (mounted) {
+      setState(() {
+        _dashboardData['monthlySpending'] = monthlySpending;
+        _dashboardData['recentTransactions'] = recentTransactions;
+        _dashboardData['spendingPercentage'] =
+            _dashboardData['monthlyBudget'] > 0
+            ? (monthlySpending / _dashboardData['monthlyBudget']) * 100
+            : 0.0;
+      });
+    }
   }
 
   Future<void> _loadUserName() async {
@@ -82,6 +166,7 @@ class _ExpenseDashboardState extends State<ExpenseDashboard> {
   void dispose() {
     _analytics.trackSessionEnd();
     _scrollController.dispose();
+    _expenseNotifier.removeListener(_onDataChanged);
     super.dispose();
   }
 
@@ -116,8 +201,19 @@ class _ExpenseDashboardState extends State<ExpenseDashboard> {
   }
 
   void _navigateToAddExpense() {
-    HapticFeedback.lightImpact();
-    Navigator.pushNamed(context, '/add-expense');
+    Navigator.pushNamed(
+      context,
+      '/add-expense',
+      arguments: {'transactionType': 'expense'},
+    );
+  }
+
+  void _navigateToAddIncome() {
+    Navigator.pushNamed(
+      context,
+      '/add-expense',
+      arguments: {'transactionType': 'income'},
+    );
   }
 
   void _navigateToTransactionHistory() {
@@ -199,7 +295,7 @@ class _ExpenseDashboardState extends State<ExpenseDashboard> {
                   // Quick Actions
                   QuickActionsWidget(
                     onAddExpense: _navigateToAddExpense,
-                    onAddIncome: _navigateToAddExpense,
+                    onAddIncome: _navigateToAddIncome,
                     onViewBudget: _navigateToBudgetManagement,
                     onGenerateReport: _navigateToAnalytics,
                   ),

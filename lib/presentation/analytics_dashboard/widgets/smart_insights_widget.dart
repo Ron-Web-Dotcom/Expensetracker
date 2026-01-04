@@ -2,37 +2,111 @@ import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../../core/app_export.dart';
+import '../../../services/expense_data_service.dart';
 
-class SmartInsightsWidget extends StatelessWidget {
+class SmartInsightsWidget extends StatefulWidget {
   const SmartInsightsWidget({super.key});
+
+  @override
+  State<SmartInsightsWidget> createState() => _SmartInsightsWidgetState();
+}
+
+class _SmartInsightsWidgetState extends State<SmartInsightsWidget> {
+  final ExpenseDataService _expenseDataService = ExpenseDataService();
+  List<Map<String, dynamic>> _insights = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadInsights();
+  }
+
+  Future<void> _loadInsights() async {
+    setState(() => _isLoading = true);
+
+    final now = DateTime.now();
+    final expenses = await _expenseDataService.getAllExpenses();
+
+    final List<Map<String, dynamic>> insights = [];
+
+    if (expenses.isEmpty) {
+      insights.add({
+        "icon": "info",
+        "title": "Get Started",
+        "description":
+            "Start tracking your expenses to receive personalized insights and spending recommendations.",
+        "color": Theme.of(context).colorScheme.primary,
+      });
+    } else {
+      final thisMonthStart = DateTime(now.year, now.month, 1);
+      final thisMonthTotal = await _expenseDataService.getTotalSpending(
+        startDate: thisMonthStart,
+        endDate: now,
+      );
+
+      final budget = 2000.0;
+      final daysLeft = DateTime(now.year, now.month + 1, 0).day - now.day;
+      final budgetRemaining = budget - thisMonthTotal;
+
+      if (thisMonthTotal > 0) {
+        if (budgetRemaining > 0 && daysLeft > 0) {
+          insights.add({
+            "icon": "trending_down",
+            "title": "On Track!",
+            "description":
+                "You're doing great! You have \$${budgetRemaining.toStringAsFixed(0)} remaining with $daysLeft days left this month.",
+            "color": AppTheme.successLight,
+          });
+        } else if (budgetRemaining < 0) {
+          insights.add({
+            "icon": "lightbulb",
+            "title": "Budget Alert",
+            "description":
+                "You've exceeded your monthly budget by \$${(-budgetRemaining).toStringAsFixed(0)}. Consider reviewing your spending.",
+            "color": AppTheme.warningLight,
+          });
+        }
+      }
+
+      final categorySpending = await _expenseDataService.getSpendingByCategory(
+        startDate: thisMonthStart,
+        endDate: now,
+      );
+
+      if (categorySpending.isNotEmpty) {
+        final topCategory = categorySpending.entries.reduce(
+          (a, b) => a.value > b.value ? a : b,
+        );
+        final percentage = (topCategory.value / thisMonthTotal * 100)
+            .toStringAsFixed(0);
+
+        insights.add({
+          "icon": "info",
+          "title": "Top Spending Category",
+          "description":
+              "${topCategory.key} accounts for $percentage% of your spending this month (\$${topCategory.value.toStringAsFixed(0)}).",
+          "color": Theme.of(context).colorScheme.primary,
+        });
+      }
+    }
+
+    setState(() {
+      _insights = insights;
+      _isLoading = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    final List<Map<String, dynamic>> insights = [
-      {
-        "icon": "lightbulb",
-        "title": "Weekend Spending Alert",
-        "description":
-            "Your weekend spending is 45% higher than weekdays. Consider setting a weekend budget limit.",
-        "color": AppTheme.warningLight,
-      },
-      {
-        "icon": "trending_down",
-        "title": "Great Progress!",
-        "description":
-            "You've reduced food expenses by 18% compared to last month. Keep up the good work!",
-        "color": AppTheme.successLight,
-      },
-      {
-        "icon": "info",
-        "title": "Budget Insight",
-        "description":
-            "You're on track to stay within budget this month. You have \$360 remaining with 8 days left.",
-        "color": theme.colorScheme.primary,
-      },
-    ];
+    if (_isLoading) {
+      return SizedBox(
+        height: 10.h,
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -61,9 +135,9 @@ class SmartInsightsWidget extends StatelessWidget {
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           padding: EdgeInsets.symmetric(horizontal: 4.w),
-          itemCount: insights.length,
+          itemCount: _insights.length,
           itemBuilder: (context, index) {
-            final insight = insights[index];
+            final insight = _insights[index];
             return Container(
               margin: EdgeInsets.only(bottom: 2.h),
               padding: EdgeInsets.all(4.w),

@@ -4,12 +4,17 @@ import 'package:sizer/sizer.dart';
 
 import '../../core/app_export.dart';
 import '../../main.dart';
+import '../../routes/app_routes.dart';
 import '../../services/analytics_service.dart';
+import '../../services/budget_data_service.dart';
 import '../../services/data_export_service.dart';
+import '../../services/expense_data_service.dart';
 import '../../services/locale_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/settings_service.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/custom_icon_widget.dart';
+import '../login/login.dart';
 import './widgets/profile_section_widget.dart';
 import './widgets/settings_item_widget.dart';
 import './widgets/settings_section_widget.dart';
@@ -28,6 +33,8 @@ class _SettingsState extends State<Settings> {
   final DataExportService _dataExportService = DataExportService();
   final NotificationService _notificationService = NotificationService();
   final LocaleService _localeService = LocaleService();
+  final ExpenseDataService _expenseDataService = ExpenseDataService();
+  final BudgetDataService _budgetDataService = BudgetDataService();
 
   bool _notificationsEnabled = true;
   bool _biometricEnabled = false;
@@ -917,11 +924,56 @@ class _SettingsState extends State<Settings> {
   }
 
   Future<void> _handleClearData() async {
-    try {
-      await _dataExportService.clearAllData();
-      _showSnackBar("All data cleared successfully");
-    } catch (e) {
-      _showSnackBar("Failed to clear data: ${e.toString()}");
+    HapticFeedback.mediumImpact();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Clear All Data'),
+        content: const Text(
+          'This will permanently delete all your expenses, budgets, and transaction history. This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: const Text('Clear All'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await _expenseDataService.clearAllExpenses();
+        await _budgetDataService.clearAllBudgets();
+
+        if (mounted) {
+          HapticFeedback.mediumImpact();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('All data cleared successfully'),
+              duration: Duration(seconds: 2),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to clear data: ${e.toString()}'),
+              duration: const Duration(seconds: 2),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
+        }
+      }
     }
   }
 

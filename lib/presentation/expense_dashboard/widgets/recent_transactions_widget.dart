@@ -4,10 +4,11 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../../core/app_export.dart';
-import '../../../widgets/custom_icon_widget.dart';
+import '../../../services/expense_data_service.dart';
+import '../../../services/expense_notifier.dart';
 
 /// Recent transactions list with swipe actions
-class RecentTransactionsWidget extends StatelessWidget {
+class RecentTransactionsWidget extends StatefulWidget {
   final List<Map<String, dynamic>> transactions;
   final VoidCallback onViewAll;
 
@@ -17,32 +18,112 @@ class RecentTransactionsWidget extends StatelessWidget {
     required this.onViewAll,
   });
 
+  @override
+  State<RecentTransactionsWidget> createState() =>
+      _RecentTransactionsWidgetState();
+}
+
+class _RecentTransactionsWidgetState extends State<RecentTransactionsWidget> {
+  final ExpenseNotifier _expenseNotifier = ExpenseNotifier();
+
+  @override
+  void initState() {
+    super.initState();
+    _expenseNotifier.addListener(_onDataChanged);
+  }
+
+  @override
+  void dispose() {
+    _expenseNotifier.removeListener(_onDataChanged);
+    super.dispose();
+  }
+
+  void _onDataChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
   void _handleEdit(BuildContext context, Map<String, dynamic> transaction) {
     HapticFeedback.mediumImpact();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Edit: ${transaction["description"]}'),
-        duration: const Duration(seconds: 2),
-      ),
+
+    final amount = (transaction["amount"] as num).toDouble().abs();
+    final transactionType =
+        transaction["transactionType"] as String? ??
+        ((transaction["amount"] as num).toDouble() > 0 ? 'income' : 'expense');
+
+    Navigator.pushNamed(
+      context,
+      AppRoutes.addExpense,
+      arguments: {
+        'isEdit': true,
+        'transaction': {
+          'id': transaction['id'],
+          'amount': amount,
+          'category': transaction['category'],
+          'date': transaction['date'],
+          'paymentMethod': transaction['paymentMethod'] ?? 'Cash',
+          'description': transaction['description'] ?? '',
+          'receiptPhotos': transaction['receiptPhotos'] ?? [],
+          'hasLocation': transaction['hasLocation'] ?? false,
+          'transactionType': transactionType,
+        },
+      },
     );
   }
 
-  void _handleDuplicate(
+  Future<void> _handleDuplicate(
     BuildContext context,
     Map<String, dynamic> transaction,
-  ) {
+  ) async {
     HapticFeedback.mediumImpact();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Duplicated: ${transaction["description"]}'),
-        duration: const Duration(seconds: 2),
-      ),
-    );
+
+    try {
+      final expenseService = ExpenseDataService();
+      final amount = (transaction['amount'] as num).toDouble();
+      final transactionType =
+          transaction['transactionType'] as String? ??
+          (amount > 0 ? 'income' : 'expense');
+
+      await expenseService.saveExpense(
+        amount: amount.abs(),
+        category: transaction['category'] as String,
+        date: DateTime.now(),
+        paymentMethod: transaction['paymentMethod'] as String? ?? 'Cash',
+        description: '${transaction['description']} (Copy)',
+        receiptPhotos: transaction['receiptPhotos'] as List<String>? ?? [],
+        hasLocation: transaction['hasLocation'] as bool? ?? false,
+        transactionType: transactionType,
+      );
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Duplicated: ${transaction["description"]}'),
+            duration: const Duration(seconds: 2),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to duplicate: ${e.toString()}'),
+            duration: const Duration(seconds: 2),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
   }
 
-  void _handleDelete(BuildContext context, Map<String, dynamic> transaction) {
+  Future<void> _handleDelete(
+    BuildContext context,
+    Map<String, dynamic> transaction,
+  ) async {
     HapticFeedback.heavyImpact();
-    showDialog(
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Transaction'),
@@ -51,24 +132,49 @@ class RecentTransactionsWidget extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Deleted: ${transaction["description"]}'),
-                  duration: const Duration(seconds: 2),
-                ),
-              );
-            },
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
             child: const Text('Delete'),
           ),
         ],
       ),
     );
+
+    if (confirmed == true && context.mounted) {
+      try {
+        final expenseService = ExpenseDataService();
+        final transactionId = transaction['id'] as String;
+
+        await expenseService.deleteExpense(transactionId);
+
+        if (context.mounted) {
+          HapticFeedback.mediumImpact();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Deleted: ${transaction["description"]}'),
+              duration: const Duration(seconds: 2),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to delete: ${e.toString()}'),
+              duration: const Duration(seconds: 2),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
+        }
+      }
+    }
   }
 
   @override
@@ -91,7 +197,7 @@ class RecentTransactionsWidget extends StatelessWidget {
                 ),
               ),
               TextButton(
-                onPressed: onViewAll,
+                onPressed: widget.onViewAll,
                 child: Text(
                   'View All',
                   style: theme.textTheme.bodyMedium?.copyWith(
@@ -104,19 +210,19 @@ class RecentTransactionsWidget extends StatelessWidget {
           ),
         ),
         SizedBox(height: 1.h),
-        transactions.isEmpty
+        widget.transactions.isEmpty
             ? _buildEmptyState(context)
             : ListView.separated(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                itemCount: transactions.length,
+                itemCount: widget.transactions.length,
                 separatorBuilder: (context, index) => Divider(
                   height: 1,
                   thickness: 1,
                   color: theme.colorScheme.outline.withValues(alpha: 0.1),
                 ),
                 itemBuilder: (context, index) {
-                  final transaction = transactions[index];
+                  final transaction = widget.transactions[index];
                   return _buildTransactionItem(context, transaction);
                 },
               ),
@@ -131,11 +237,15 @@ class RecentTransactionsWidget extends StatelessWidget {
     final theme = Theme.of(context);
     final amount = transaction["amount"] as double;
     final isIncome = amount > 0;
+    final transactionType =
+        transaction["transactionType"] as String? ??
+        (amount > 0 ? 'income' : 'expense');
 
     return Slidable(
       key: ValueKey(transaction["id"]),
       startActionPane: ActionPane(
         motion: const ScrollMotion(),
+        extentRatio: 0.5,
         children: [
           SlidableAction(
             onPressed: (context) => _handleEdit(context, transaction),
@@ -143,6 +253,7 @@ class RecentTransactionsWidget extends StatelessWidget {
             foregroundColor: theme.colorScheme.onPrimary,
             icon: Icons.edit,
             label: 'Edit',
+            borderRadius: BorderRadius.circular(0),
           ),
           SlidableAction(
             onPressed: (context) => _handleDuplicate(context, transaction),
@@ -150,11 +261,13 @@ class RecentTransactionsWidget extends StatelessWidget {
             foregroundColor: theme.colorScheme.onTertiary,
             icon: Icons.content_copy,
             label: 'Duplicate',
+            borderRadius: BorderRadius.circular(0),
           ),
         ],
       ),
       endActionPane: ActionPane(
         motion: const ScrollMotion(),
+        extentRatio: 0.25,
         children: [
           SlidableAction(
             onPressed: (context) => _handleDelete(context, transaction),
@@ -162,6 +275,7 @@ class RecentTransactionsWidget extends StatelessWidget {
             foregroundColor: theme.colorScheme.onError,
             icon: Icons.delete,
             label: 'Delete',
+            borderRadius: BorderRadius.circular(0),
           ),
         ],
       ),
@@ -175,7 +289,7 @@ class RecentTransactionsWidget extends StatelessWidget {
               height: 48,
               decoration: BoxDecoration(
                 color: isIncome
-                    ? theme.colorScheme.primary.withValues(alpha: 0.1)
+                    ? const Color(0xFF4CAF50).withValues(alpha: 0.1)
                     : theme.colorScheme.error.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -183,7 +297,7 @@ class RecentTransactionsWidget extends StatelessWidget {
                 child: CustomIconWidget(
                   iconName: transaction["categoryIcon"] as String,
                   color: isIncome
-                      ? theme.colorScheme.primary
+                      ? const Color(0xFF4CAF50)
                       : theme.colorScheme.error,
                   size: 24,
                 ),
@@ -195,7 +309,8 @@ class RecentTransactionsWidget extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    transaction["description"] as String,
+                    transaction["description"] as String? ??
+                        transaction["category"] as String,
                     style: theme.textTheme.bodyLarge?.copyWith(
                       fontWeight: FontWeight.w600,
                       color: theme.colorScheme.onSurface,
@@ -209,19 +324,25 @@ class RecentTransactionsWidget extends StatelessWidget {
                       Text(
                         transaction["category"] as String,
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.6,
+                          ),
                         ),
                       ),
                       Text(
                         ' • ',
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.6,
+                          ),
                         ),
                       ),
                       Text(
                         '${transaction["date"]} at ${transaction["time"]}',
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.6,
+                          ),
                         ),
                       ),
                     ],
@@ -229,15 +350,26 @@ class RecentTransactionsWidget extends StatelessWidget {
                 ],
               ),
             ),
-            SizedBox(width: 2.w),
-            Text(
-              '${isIncome ? '+' : ''}\$${amount.abs().toStringAsFixed(2)}',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: isIncome
-                    ? theme.colorScheme.primary
-                    : theme.colorScheme.error,
-              ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  '${isIncome ? '+' : '-'}\$${amount.abs().toStringAsFixed(2)}',
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: isIncome
+                        ? const Color(0xFF4CAF50)
+                        : theme.colorScheme.error,
+                  ),
+                ),
+                SizedBox(height: 0.5.h),
+                Text(
+                  transaction["date"] as String,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

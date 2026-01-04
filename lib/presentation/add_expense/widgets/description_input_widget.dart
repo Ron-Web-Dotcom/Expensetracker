@@ -4,11 +4,13 @@ import 'package:sizer/sizer.dart';
 class DescriptionInputWidget extends StatelessWidget {
   final TextEditingController controller;
   final String? errorText;
+  final ValueChanged<String>? onChanged;
 
   const DescriptionInputWidget({
     super.key,
     required this.controller,
     this.errorText,
+    this.onChanged,
   });
 
   @override
@@ -28,6 +30,7 @@ class DescriptionInputWidget extends StatelessWidget {
         ),
         SizedBox(height: 1.5.h),
         Container(
+          constraints: BoxConstraints(minHeight: 18.h, maxHeight: 28.h),
           padding: EdgeInsets.all(4.w),
           decoration: BoxDecoration(
             color: theme.colorScheme.surface.withValues(alpha: 0.9),
@@ -50,9 +53,12 @@ class DescriptionInputWidget extends StatelessWidget {
           ),
           child: TextField(
             controller: controller,
-            maxLines: 3,
+            maxLines: null,
+            minLines: 5,
             maxLength: 200,
+            textAlignVertical: TextAlignVertical.top,
             style: theme.textTheme.bodyMedium,
+            onChanged: onChanged,
             decoration: InputDecoration(
               hintText: 'Add a note about this expense...',
               hintStyle: theme.textTheme.bodyMedium?.copyWith(

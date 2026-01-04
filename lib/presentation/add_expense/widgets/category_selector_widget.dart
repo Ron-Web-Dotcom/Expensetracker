@@ -9,18 +9,26 @@ class CategorySelectorWidget extends StatelessWidget {
   final String? selectedCategory;
   final ValueChanged<String> onCategorySelected;
   final String? errorText;
+  final String transactionType;
 
   const CategorySelectorWidget({
     super.key,
     required this.selectedCategory,
     required this.onCategorySelected,
     this.errorText,
+    this.transactionType = 'expense',
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final hasError = errorText != null;
+    final categories = transactionType == 'income'
+        ? _incomeCategories
+        : _expenseCategories;
+    final primaryColor = transactionType == 'income'
+        ? const Color(0xFF4CAF50)
+        : theme.colorScheme.error;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -59,10 +67,10 @@ class CategorySelectorWidget extends StatelessWidget {
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               physics: const BouncingScrollPhysics(),
-              itemCount: _categories.length,
+              itemCount: categories.length,
               separatorBuilder: (context, index) => SizedBox(width: 3.w),
               itemBuilder: (context, index) {
-                final category = _categories[index];
+                final category = categories[index];
                 final isSelected = selectedCategory == category['name'];
 
                 return GestureDetector(
@@ -75,12 +83,12 @@ class CategorySelectorWidget extends StatelessWidget {
                     padding: EdgeInsets.symmetric(vertical: 2.h),
                     decoration: BoxDecoration(
                       color: isSelected
-                          ? theme.colorScheme.primary
+                          ? primaryColor
                           : theme.colorScheme.surface.withValues(alpha: 0.9),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: isSelected
-                            ? theme.colorScheme.primary
+                            ? primaryColor
                             : theme.colorScheme.outline.withValues(alpha: 0.3),
                         width: 1,
                       ),
@@ -134,7 +142,7 @@ class CategorySelectorWidget extends StatelessWidget {
   }
 }
 
-const List<Map<String, dynamic>> _categories = [
+const List<Map<String, dynamic>> _expenseCategories = [
   {'name': 'Food & Dining', 'icon': 'restaurant'},
   {'name': 'Transportation', 'icon': 'directions_car'},
   {'name': 'Shopping', 'icon': 'shopping_bag'},
@@ -143,4 +151,15 @@ const List<Map<String, dynamic>> _categories = [
   {'name': 'Healthcare', 'icon': 'medical_services'},
   {'name': 'Utilities', 'icon': 'bolt'},
   {'name': 'Education', 'icon': 'school'},
+];
+
+const List<Map<String, dynamic>> _incomeCategories = [
+  {'name': 'Salary', 'icon': 'payments'},
+  {'name': 'Freelance', 'icon': 'work'},
+  {'name': 'Business', 'icon': 'business_center'},
+  {'name': 'Investment', 'icon': 'trending_up'},
+  {'name': 'Gift', 'icon': 'card_giftcard'},
+  {'name': 'Refund', 'icon': 'receipt'},
+  {'name': 'Bonus', 'icon': 'star'},
+  {'name': 'Other', 'icon': 'more_horiz'},
 ];

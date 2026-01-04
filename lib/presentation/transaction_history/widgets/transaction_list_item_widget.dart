@@ -99,16 +99,17 @@ class TransactionListItemWidget extends StatelessWidget {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: _getCategoryColor(
-                  category,
-                  theme,
-                ).withValues(alpha: 0.1),
+                color: isIncome
+                    ? const Color(0xFF4CAF50).withValues(alpha: 0.1)
+                    : _getCategoryColor(category, theme).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Center(
                 child: CustomIconWidget(
                   iconName: _getCategoryIcon(category).codePoint.toString(),
-                  color: _getCategoryColor(category, theme),
+                  color: isIncome
+                      ? const Color(0xFF4CAF50)
+                      : _getCategoryColor(category, theme),
                   size: 24,
                 ),
               ),
@@ -183,15 +184,15 @@ class TransactionListItemWidget extends StatelessWidget {
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                     color: isIncome
-                        ? const Color(0xFF27AE60)
-                        : const Color(0xFFE74C3C),
+                        ? const Color(0xFF4CAF50)
+                        : theme.colorScheme.error,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  transaction['paymentMethod'] as String,
+                  DateFormat('MMM d, y').format(date),
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
               ],

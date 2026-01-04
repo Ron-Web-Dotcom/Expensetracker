@@ -3,6 +3,7 @@ import 'package:sizer/sizer.dart';
 
 import '../../core/app_export.dart';
 import '../../services/analytics_service.dart';
+import '../../services/expense_notifier.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_bottom_bar.dart';
 import '../../widgets/custom_icon_widget.dart';
@@ -22,6 +23,7 @@ class AnalyticsDashboard extends StatefulWidget {
 
 class _AnalyticsDashboardState extends State<AnalyticsDashboard> {
   final AnalyticsService _analytics = AnalyticsService();
+  final ExpenseNotifier _expenseNotifier = ExpenseNotifier();
   String _selectedPeriod = 'This Month';
   Map<String, dynamic> _analyticsSummary = {};
 
@@ -30,6 +32,16 @@ class _AnalyticsDashboardState extends State<AnalyticsDashboard> {
     super.initState();
     _analytics.trackScreenView('analytics_dashboard');
     _loadAnalyticsSummary();
+
+    // Listen for real-time data changes
+    _expenseNotifier.addListener(_onDataChanged);
+  }
+
+  void _onDataChanged() {
+    // Reload analytics when expenses or budgets change
+    _loadAnalyticsSummary();
+    // Force rebuild of all child widgets
+    setState(() {});
   }
 
   Future<void> _loadAnalyticsSummary() async {
@@ -47,6 +59,7 @@ class _AnalyticsDashboardState extends State<AnalyticsDashboard> {
   @override
   void dispose() {
     _chartPageController.dispose();
+    _expenseNotifier.removeListener(_onDataChanged);
     super.dispose();
   }
 

@@ -5,11 +5,14 @@ import 'package:intl/intl.dart';
 
 import '../../core/app_export.dart';
 import '../../services/analytics_service.dart';
+import '../../services/expense_data_service.dart';
+import '../../services/expense_notifier.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_icon_widget.dart';
 import './widgets/filter_bottom_sheet_widget.dart';
 import './widgets/transaction_empty_state_widget.dart';
 import './widgets/transaction_list_item_widget.dart';
+import './widgets/transaction_menu_bar_widget.dart';
 
 class TransactionHistory extends StatefulWidget {
   const TransactionHistory({super.key});
@@ -20,11 +23,14 @@ class TransactionHistory extends StatefulWidget {
 
 class _TransactionHistoryState extends State<TransactionHistory> {
   final AnalyticsService _analytics = AnalyticsService();
+  final ExpenseDataService _expenseDataService = ExpenseDataService();
+  final ExpenseNotifier _expenseNotifier = ExpenseNotifier();
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   String _selectedFilter = 'All';
   String _selectedCategory = 'All Categories';
   DateTimeRange? _selectedDateRange;
+  String _selectedMenu = 'All';
 
   bool _isLoading = false;
   bool _isLoadingMore = false;
@@ -39,12 +45,22 @@ class _TransactionHistoryState extends State<TransactionHistory> {
   void initState() {
     super.initState();
     _analytics.trackScreenView('transaction_history');
+    _loadTransactions();
+
+    // Listen for real-time data changes
+    _expenseNotifier.addListener(_onDataChanged);
+  }
+
+  void _onDataChanged() {
+    // Reload transactions when expenses change
+    _loadTransactions();
   }
 
   @override
   void dispose() {
     _searchController.dispose();
     _scrollController.dispose();
+    _expenseNotifier.removeListener(_onDataChanged);
     super.dispose();
   }
 
@@ -58,9 +74,37 @@ class _TransactionHistoryState extends State<TransactionHistory> {
   Future<void> _loadTransactions() async {
     setState(() => _isLoading = true);
 
-    await Future.delayed(const Duration(milliseconds: 800));
+    // Load real expense data from service
+    final expenses = await _expenseDataService.getAllExpenses();
 
-    _allTransactions = _generateMockTransactions();
+    // Transform expense data to transaction format
+    _allTransactions = expenses.map((expense) {
+      final amount = (expense['amount'] as num).toDouble();
+      final transactionType =
+          expense['transactionType'] as String? ??
+          (amount > 0 ? 'income' : 'expense');
+
+      return {
+        'id': expense['id'],
+        'description':
+            expense['description'] ??
+            (transactionType == 'income' ? 'Income' : 'Expense'),
+        'amount': amount,
+        'category': expense['category'],
+        'date': DateTime.parse(expense['date']),
+        'paymentMethod': expense['paymentMethod'],
+        'hasReceipt': (expense['receiptPhotos'] as List).isNotEmpty,
+        'isRecurring': false,
+        'receiptPhotos': expense['receiptPhotos'],
+        'transactionType': transactionType,
+      };
+    }).toList();
+
+    // Sort by date descending
+    _allTransactions.sort(
+      (a, b) => (b['date'] as DateTime).compareTo(a['date'] as DateTime),
+    );
+
     _filteredTransactions = List.from(_allTransactions);
 
     setState(() => _isLoading = false);
@@ -138,6 +182,25 @@ class _TransactionHistoryState extends State<TransactionHistory> {
   void _applyFilters() {
     List<Map<String, dynamic>> filtered = List.from(_allTransactions);
 
+    // Apply menu filter
+    if (_selectedMenu == 'Expenses') {
+      filtered = filtered.where((transaction) {
+        return (transaction['amount'] as double) < 0;
+      }).toList();
+    } else if (_selectedMenu == 'Income') {
+      filtered = filtered.where((transaction) {
+        return (transaction['amount'] as double) > 0;
+      }).toList();
+    } else if (_selectedMenu == 'Recurring') {
+      filtered = filtered.where((transaction) {
+        return transaction['isRecurring'] == true;
+      }).toList();
+    } else if (_selectedMenu == 'Receipts') {
+      filtered = filtered.where((transaction) {
+        return transaction['hasReceipt'] == true;
+      }).toList();
+    }
+
     if (_activeFilters['dateRange'] != null) {
       final dateRange = _activeFilters['dateRange'] as Map<String, DateTime>;
       filtered = filtered.where((transaction) {
@@ -186,6 +249,13 @@ class _TransactionHistoryState extends State<TransactionHistory> {
     });
   }
 
+  void _onMenuSelected(String menuId) {
+    setState(() {
+      _selectedMenu = menuId;
+      _applyFilters();
+    });
+  }
+
   void _removeFilter(String filterKey) {
     setState(() {
       _activeFilters.remove(filterKey);
@@ -203,34 +273,70 @@ class _TransactionHistoryState extends State<TransactionHistory> {
 
   void _editTransaction(Map<String, dynamic> transaction) {
     HapticFeedback.lightImpact();
-    Navigator.pushNamed(context, '/add-expense', arguments: transaction);
+    final amount = (transaction['amount'] as double);
+    final transactionType =
+        transaction['transactionType'] as String? ??
+        (amount > 0 ? 'income' : 'expense');
+
+    Navigator.pushNamed(
+      context,
+      '/add-expense',
+      arguments: {
+        'isEdit': true,
+        'transaction': {
+          'id': transaction['id'],
+          'amount': amount.abs(),
+          'category': transaction['category'],
+          'description': transaction['description'],
+          'date': transaction['date'],
+          'paymentMethod': transaction['paymentMethod'],
+          'receiptPhotos': transaction['receiptPhotos'] ?? [],
+          'hasLocation': transaction['hasLocation'] ?? false,
+          'transactionType': transactionType,
+        },
+      },
+    );
   }
 
-  void _duplicateTransaction(Map<String, dynamic> transaction) {
+  Future<void> _duplicateTransaction(Map<String, dynamic> transaction) async {
     HapticFeedback.lightImpact();
-    final duplicated = Map<String, dynamic>.from(transaction);
-    duplicated['id'] = DateTime.now().millisecondsSinceEpoch;
-    duplicated['date'] = DateTime.now();
 
-    setState(() {
-      _allTransactions.insert(0, duplicated);
-      _applyFilters();
-    });
+    try {
+      final expenseService = ExpenseDataService();
+      final amount = (transaction['amount'] as num).toDouble();
+      final transactionType =
+          transaction['transactionType'] as String? ??
+          (amount > 0 ? 'income' : 'expense');
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Transaction duplicated'),
-        action: SnackBarAction(
-          label: 'Undo',
-          onPressed: () {
-            setState(() {
-              _allTransactions.removeAt(0);
-              _applyFilters();
-            });
-          },
-        ),
-      ),
-    );
+      await expenseService.saveExpense(
+        amount: amount.abs(),
+        category: transaction['category'] as String,
+        date: DateTime.now(),
+        paymentMethod: transaction['paymentMethod'] as String? ?? 'Cash',
+        description: '${transaction['description']} (Copy)',
+        receiptPhotos: transaction['receiptPhotos'] as List<String>? ?? [],
+        hasLocation: transaction['hasLocation'] as bool? ?? false,
+        transactionType: transactionType,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Transaction duplicated successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to duplicate: ${e.toString()}'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
   }
 
   void _shareReceipt(Map<String, dynamic> transaction) {
@@ -240,31 +346,58 @@ class _TransactionHistoryState extends State<TransactionHistory> {
     );
   }
 
-  void _deleteTransaction(Map<String, dynamic> transaction) {
+  Future<void> _deleteTransaction(Map<String, dynamic> transaction) async {
     HapticFeedback.mediumImpact();
-    final index = _allTransactions.indexWhere(
-      (t) => t['id'] == transaction['id'],
-    );
 
-    setState(() {
-      _allTransactions.removeAt(index);
-      _applyFilters();
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Transaction deleted'),
-        action: SnackBarAction(
-          label: 'Undo',
-          onPressed: () {
-            setState(() {
-              _allTransactions.insert(index, transaction);
-              _applyFilters();
-            });
-          },
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Transaction'),
+        content: Text(
+          'Are you sure you want to delete "${transaction["description"]}"?',
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
       ),
     );
+
+    if (confirmed == true && mounted) {
+      try {
+        final expenseService = ExpenseDataService();
+        final transactionId = transaction['id'] as String;
+
+        await expenseService.deleteExpense(transactionId);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Transaction deleted successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to delete: ${e.toString()}'),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
+        }
+      }
+    }
   }
 
   void _showTransactionOptions(Map<String, dynamic> transaction) {
@@ -500,6 +633,16 @@ class _TransactionHistoryState extends State<TransactionHistory> {
     return grouped;
   }
 
+  void _onTransactionTap(Map<String, dynamic> transaction) {
+    HapticFeedback.lightImpact();
+    Navigator.pushNamed(context, '/add-expense', arguments: transaction);
+  }
+
+  void _onTransactionLongPress(Map<String, dynamic> transaction) {
+    HapticFeedback.lightImpact();
+    _showTransactionOptions(transaction);
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -509,7 +652,10 @@ class _TransactionHistoryState extends State<TransactionHistory> {
       backgroundColor: theme.colorScheme.surface,
       appBar: CustomAppBar(
         title: 'Transaction History',
-        variant: CustomAppBarVariant.standard,
+        variant: CustomAppBarVariant.withBack,
+        onBackPressed: () {
+          Navigator.pushReplacementNamed(context, '/expense-dashboard');
+        },
         actions: [
           IconButton(
             icon: CustomIconWidget(
@@ -525,6 +671,10 @@ class _TransactionHistoryState extends State<TransactionHistory> {
       body: Column(
         children: [
           _buildSearchBar(theme),
+          TransactionMenuBarWidget(
+            selectedMenu: _selectedMenu,
+            onMenuSelected: _onMenuSelected,
+          ),
           if (_activeFilters.isNotEmpty) _buildActiveFiltersChips(theme),
           Expanded(
             child: _isLoading
@@ -813,38 +963,34 @@ class _TransactionHistoryState extends State<TransactionHistory> {
                 return Slidable(
                   key: ValueKey(transaction['id']),
                   startActionPane: ActionPane(
-                    motion: const ScrollMotion(),
+                    motion: const DrawerMotion(),
+                    extentRatio: 0.5,
                     children: [
                       SlidableAction(
-                        onPressed: (_) => _editTransaction(transaction),
-                        backgroundColor: theme.colorScheme.primary,
-                        foregroundColor: theme.colorScheme.onPrimary,
+                        onPressed: (context) => _editTransaction(transaction),
+                        backgroundColor: const Color(0xFF3498DB),
+                        foregroundColor: Colors.white,
                         icon: Icons.edit,
                         label: 'Edit',
                       ),
                       SlidableAction(
-                        onPressed: (_) => _duplicateTransaction(transaction),
-                        backgroundColor: theme.colorScheme.tertiary,
-                        foregroundColor: theme.colorScheme.onTertiary,
+                        onPressed: (context) =>
+                            _duplicateTransaction(transaction),
+                        backgroundColor: Theme.of(context).colorScheme.tertiary,
+                        foregroundColor: Colors.white,
                         icon: Icons.content_copy,
                         label: 'Duplicate',
-                      ),
-                      SlidableAction(
-                        onPressed: (_) => _shareReceipt(transaction),
-                        backgroundColor: theme.colorScheme.secondary,
-                        foregroundColor: theme.colorScheme.onSecondary,
-                        icon: Icons.share,
-                        label: 'Share',
                       ),
                     ],
                   ),
                   endActionPane: ActionPane(
-                    motion: const ScrollMotion(),
+                    motion: const DrawerMotion(),
+                    extentRatio: 0.25,
                     children: [
                       SlidableAction(
-                        onPressed: (_) => _deleteTransaction(transaction),
-                        backgroundColor: theme.colorScheme.error,
-                        foregroundColor: theme.colorScheme.onError,
+                        onPressed: (context) => _deleteTransaction(transaction),
+                        backgroundColor: const Color(0xFFE74C3C),
+                        foregroundColor: Colors.white,
                         icon: Icons.delete,
                         label: 'Delete',
                       ),
@@ -852,8 +998,8 @@ class _TransactionHistoryState extends State<TransactionHistory> {
                   ),
                   child: TransactionListItemWidget(
                     transaction: transaction,
-                    onTap: () => _editTransaction(transaction),
-                    onLongPress: () => _showTransactionOptions(transaction),
+                    onTap: () => _onTransactionTap(transaction),
+                    onLongPress: () => _onTransactionLongPress(transaction),
                   ),
                 );
               }),
