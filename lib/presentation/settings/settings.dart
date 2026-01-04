@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../core/app_export.dart';
 import '../../main.dart';
-import '../../routes/app_routes.dart';
 import '../../services/analytics_service.dart';
 import '../../services/budget_data_service.dart';
 import '../../services/data_export_service.dart';
@@ -13,8 +13,6 @@ import '../../services/locale_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/settings_service.dart';
 import '../../widgets/custom_app_bar.dart';
-import '../../widgets/custom_icon_widget.dart';
-import '../login/login.dart';
 import './widgets/profile_section_widget.dart';
 import './widgets/settings_item_widget.dart';
 import './widgets/settings_section_widget.dart';
@@ -517,6 +515,193 @@ class _SettingsState extends State<Settings> {
                       size: 5.w,
                     ),
                     onTap: () => _showClearDataDialog(context),
+                    showDivider: false,
+                  ),
+                ],
+              ),
+              SizedBox(height: 2.h),
+
+              // Help & Support section
+              SettingsSectionWidget(
+                title: tr['HELP & SUPPORT'] ?? "HELP & SUPPORT",
+                children: [
+                  SettingsItemWidget(
+                    title: tr['Help Center'] ?? "Help Center",
+                    subtitle:
+                        tr['Browse articles and FAQs'] ??
+                        "Browse articles and FAQs",
+                    leadingIcon: 'help',
+                    trailing: CustomIconWidget(
+                      iconName: 'chevron_right',
+                      color: isDark
+                          ? const Color(0xFFB0B0B0)
+                          : const Color(0xFF757575),
+                      size: 5.w,
+                    ),
+                    onTap: () {
+                      Navigator.pushNamed(context, AppRoutes.helpCenter);
+                    },
+                  ),
+                  SettingsItemWidget(
+                    title: tr['Interactive Tutorial'] ?? "Interactive Tutorial",
+                    subtitle:
+                        tr['Learn app features step-by-step'] ??
+                        "Learn app features step-by-step",
+                    leadingIcon: 'school',
+                    trailing: CustomIconWidget(
+                      iconName: 'chevron_right',
+                      color: isDark
+                          ? const Color(0xFFB0B0B0)
+                          : const Color(0xFF757575),
+                      size: 5.w,
+                    ),
+                    onTap: () {
+                      Navigator.pushNamed(
+                        context,
+                        AppRoutes.interactiveTutorial,
+                      );
+                    },
+                  ),
+                  SettingsItemWidget(
+                    title: tr['User Guide Library'] ?? "User Guide Library",
+                    subtitle:
+                        tr['Access comprehensive documentation'] ??
+                        "Access comprehensive documentation",
+                    leadingIcon: 'menu_book',
+                    trailing: CustomIconWidget(
+                      iconName: 'chevron_right',
+                      color: isDark
+                          ? const Color(0xFFB0B0B0)
+                          : const Color(0xFF757575),
+                      size: 5.w,
+                    ),
+                    onTap: () {
+                      Navigator.pushNamed(context, AppRoutes.userGuideLibrary);
+                    },
+                    showDivider: false,
+                  ),
+                ],
+              ),
+              SizedBox(height: 2.h),
+
+              // Admin Analytics section
+              SettingsSectionWidget(
+                title: 'ADMIN ANALYTICS',
+                children: [
+                  SettingsItemWidget(
+                    title: 'Analytics Admin Dashboard',
+                    subtitle: 'Real-time metrics and performance insights',
+                    leadingIcon: 'admin_panel_settings',
+                    trailing: CustomIconWidget(
+                      iconName: 'chevron_right',
+                      color: isDark
+                          ? const Color(0xFFB0B0B0)
+                          : const Color(0xFF757575),
+                      size: 5.w,
+                    ),
+                    onTap: () {
+                      Navigator.pushNamed(
+                        context,
+                        AppRoutes.analyticsAdminDashboard,
+                      );
+                    },
+                  ),
+                  SettingsItemWidget(
+                    title: 'User Behavior Analytics',
+                    subtitle: 'Deep dive into user interactions and patterns',
+                    leadingIcon: 'psychology',
+                    trailing: CustomIconWidget(
+                      iconName: 'chevron_right',
+                      color: isDark
+                          ? const Color(0xFFB0B0B0)
+                          : const Color(0xFF757575),
+                      size: 5.w,
+                    ),
+                    onTap: () {
+                      Navigator.pushNamed(
+                        context,
+                        AppRoutes.userBehaviorAnalytics,
+                      );
+                    },
+                    showDivider: false,
+                  ),
+                ],
+              ),
+              SizedBox(height: 2.h),
+
+              // Support & Help Section
+              SettingsSectionWidget(
+                title: 'Support & Help',
+                children: [
+                  SettingsItemWidget(
+                    leadingIcon: 'help_center',
+                    title: 'Help Center',
+                    subtitle: 'Browse articles and guides',
+                    trailing: CustomIconWidget(
+                      iconName: 'chevron_right',
+                      color: isDark
+                          ? const Color(0xFFB0B0B0)
+                          : const Color(0xFF757575),
+                      size: 5.w,
+                    ),
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      _analytics.trackEvent('help_center_opened');
+                      Navigator.pushNamed(context, AppRoutes.helpCenter);
+                    },
+                  ),
+                  SettingsItemWidget(
+                    leadingIcon: 'menu_book_outlined',
+                    title: 'User Guide Library',
+                    subtitle: 'Browse comprehensive documentation',
+                    trailing: CustomIconWidget(
+                      iconName: 'chevron_right',
+                      color: isDark
+                          ? const Color(0xFFB0B0B0)
+                          : const Color(0xFF757575),
+                      size: 5.w,
+                    ),
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      _analytics.trackEvent('user_guide_library_opened');
+                      Navigator.pushNamed(context, AppRoutes.userGuideLibrary);
+                    },
+                  ),
+                  SettingsItemWidget(
+                    leadingIcon: 'school_outlined',
+                    title: 'Interactive Tutorial',
+                    subtitle: 'Learn how to use the app',
+                    trailing: CustomIconWidget(
+                      iconName: 'chevron_right',
+                      color: isDark
+                          ? const Color(0xFFB0B0B0)
+                          : const Color(0xFF757575),
+                      size: 5.w,
+                    ),
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      _analytics.trackEvent('tutorial_opened');
+                      Navigator.pushNamed(
+                        context,
+                        AppRoutes.interactiveTutorial,
+                      );
+                    },
+                  ),
+                  SettingsItemWidget(
+                    leadingIcon: 'support_agent',
+                    title: 'Contact Support',
+                    subtitle: 'Get help from our team',
+                    trailing: CustomIconWidget(
+                      iconName: 'chevron_right',
+                      color: isDark
+                          ? const Color(0xFFB0B0B0)
+                          : const Color(0xFF757575),
+                      size: 5.w,
+                    ),
+                    onTap: () {
+                      _analytics.trackEvent('contact_support');
+                      _showContactSupportDialog();
+                    },
                     showDivider: false,
                   ),
                 ],
@@ -1330,7 +1515,7 @@ class _SettingsState extends State<Settings> {
     if (mounted) {
       Navigator.pushNamedAndRemoveUntil(
         context,
-        AppRoutes.login,
+        AppRoutes.biometricAuth,
         (route) => false,
       );
     }
@@ -1553,7 +1738,7 @@ class _SettingsState extends State<Settings> {
                 if (mounted) {
                   Navigator.pushNamedAndRemoveUntil(
                     context,
-                    AppRoutes.login,
+                    AppRoutes.biometricAuth,
                     (route) => false,
                   );
                 }
@@ -1582,5 +1767,55 @@ class _SettingsState extends State<Settings> {
     } catch (e) {
       _showSnackBar("Backup failed: ${e.toString()}");
     }
+  }
+
+  void _showContactSupportDialog() {
+    final theme = Theme.of(context);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Contact Support"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              "We're here to help! Please describe your issue:",
+              style: theme.textTheme.bodyMedium,
+            ),
+            SizedBox(height: 2.h),
+            TextField(
+              decoration: const InputDecoration(
+                labelText: "Issue Description",
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 3,
+            ),
+            SizedBox(height: 2.h),
+            TextField(
+              decoration: const InputDecoration(
+                labelText: "Your Email",
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.emailAddress,
+            ),
+            SizedBox(height: 2.h),
+            TextButton(
+              onPressed: () {
+                _showSnackBar(
+                  "Support ticket submitted. We'll get back to you soon.",
+                );
+              },
+              child: const Text("Submit Ticket"),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
+        ],
+      ),
+    );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
+import 'package:intl/intl.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../../core/app_export.dart';
@@ -57,17 +58,15 @@ class _RecentTransactionsWidgetState extends State<RecentTransactionsWidget> {
       AppRoutes.addExpense,
       arguments: {
         'isEdit': true,
-        'transaction': {
-          'id': transaction['id'],
-          'amount': amount,
-          'category': transaction['category'],
-          'date': transaction['date'],
-          'paymentMethod': transaction['paymentMethod'] ?? 'Cash',
-          'description': transaction['description'] ?? '',
-          'receiptPhotos': transaction['receiptPhotos'] ?? [],
-          'hasLocation': transaction['hasLocation'] ?? false,
-          'transactionType': transactionType,
-        },
+        'transactionId': transaction['id'],
+        'amount': amount,
+        'category': transaction['category'],
+        'date': transaction['date'],
+        'paymentMethod': transaction['paymentMethod'] ?? 'Cash',
+        'description': transaction['description'] ?? '',
+        'receiptPhotos': transaction['receiptPhotos'] ?? [],
+        'hasLocation': transaction['hasLocation'] ?? false,
+        'transactionType': transactionType,
       },
     );
   }
@@ -85,13 +84,24 @@ class _RecentTransactionsWidgetState extends State<RecentTransactionsWidget> {
           transaction['transactionType'] as String? ??
           (amount > 0 ? 'income' : 'expense');
 
+      // Safely handle description with proper null checking
+      final String baseDescription =
+          (transaction['description'] as String?)?.trim() ?? '';
+      final String categoryName = transaction['category'] as String;
+      final String description = baseDescription.isNotEmpty
+          ? baseDescription
+          : categoryName;
+
+      // Create duplicate with new timestamp to ensure unique ID
+      await Future.delayed(const Duration(milliseconds: 10));
+
       await expenseService.saveExpense(
         amount: amount.abs(),
-        category: transaction['category'] as String,
+        category: categoryName,
         date: DateTime.now(),
         paymentMethod: transaction['paymentMethod'] as String? ?? 'Cash',
-        description: '${transaction['description']} (Copy)',
-        receiptPhotos: transaction['receiptPhotos'] as List<String>? ?? [],
+        description: '$description (Copy)',
+        receiptPhotos: List<String>.from(transaction['receiptPhotos'] ?? []),
         hasLocation: transaction['hasLocation'] as bool? ?? false,
         transactionType: transactionType,
       );
@@ -99,7 +109,7 @@ class _RecentTransactionsWidgetState extends State<RecentTransactionsWidget> {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Duplicated: ${transaction["description"]}'),
+            content: Text('Duplicated: $description'),
             duration: const Duration(seconds: 2),
             backgroundColor: Colors.green,
           ),
@@ -109,7 +119,7 @@ class _RecentTransactionsWidgetState extends State<RecentTransactionsWidget> {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to duplicate: ${e.toString()}'),
+            content: Text('Failed to duplicate transaction'),
             duration: const Duration(seconds: 2),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
@@ -123,13 +133,14 @@ class _RecentTransactionsWidgetState extends State<RecentTransactionsWidget> {
     Map<String, dynamic> transaction,
   ) async {
     HapticFeedback.heavyImpact();
+    final description =
+        transaction['description'] as String? ??
+        transaction['category'] as String;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Transaction'),
-        content: Text(
-          'Are you sure you want to delete "${transaction["description"]}"?',
-        ),
+        content: Text('Are you sure you want to delete "$description"?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -157,7 +168,7 @@ class _RecentTransactionsWidgetState extends State<RecentTransactionsWidget> {
           HapticFeedback.mediumImpact();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Deleted: ${transaction["description"]}'),
+              content: Text('Deleted: $description'),
               duration: const Duration(seconds: 2),
               backgroundColor: Colors.green,
             ),
@@ -240,6 +251,12 @@ class _RecentTransactionsWidgetState extends State<RecentTransactionsWidget> {
     final transactionType =
         transaction["transactionType"] as String? ??
         (amount > 0 ? 'income' : 'expense');
+
+    // Parse date properly
+    final dateStr = transaction["date"] as String;
+    final transactionDate = DateTime.parse(dateStr);
+    final formattedDate = DateFormat('MMM d').format(transactionDate);
+    final timeStr = transaction["time"] as String;
 
     return Slidable(
       key: ValueKey(transaction["id"]),
@@ -338,7 +355,7 @@ class _RecentTransactionsWidgetState extends State<RecentTransactionsWidget> {
                         ),
                       ),
                       Text(
-                        '${transaction["date"]} at ${transaction["time"]}',
+                        '$formattedDate at $timeStr',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.onSurface.withValues(
                             alpha: 0.6,
@@ -364,7 +381,7 @@ class _RecentTransactionsWidgetState extends State<RecentTransactionsWidget> {
                 ),
                 SizedBox(height: 0.5.h),
                 Text(
-                  transaction["date"] as String,
+                  formattedDate,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                   ),

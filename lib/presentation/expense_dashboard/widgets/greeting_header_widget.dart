@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/app_export.dart';
 import '../../../widgets/custom_icon_widget.dart';
@@ -7,13 +8,8 @@ import '../../../widgets/custom_icon_widget.dart';
 /// Greeting header with user name and current date
 class GreetingHeaderWidget extends StatelessWidget {
   final String userName;
-  final String currentDate;
 
-  const GreetingHeaderWidget({
-    super.key,
-    required this.userName,
-    required this.currentDate,
-  });
+  const GreetingHeaderWidget({super.key, required this.userName});
 
   String _getGreeting() {
     final hour = DateTime.now().hour;
@@ -21,14 +17,18 @@ class GreetingHeaderWidget extends StatelessWidget {
       return 'Good Morning';
     } else if (hour < 17) {
       return 'Good Afternoon';
-    } else {
+    } else if (hour < 21) {
       return 'Good Evening';
+    } else {
+      return 'Good Night';
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    // Get real-time current date
+    final currentDate = DateFormat('MMMM d, y').format(DateTime.now());
 
     return Container(
       width: double.infinity,

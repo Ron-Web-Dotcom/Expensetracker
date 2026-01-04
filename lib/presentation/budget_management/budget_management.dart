@@ -8,6 +8,7 @@ import '../../services/notification_service.dart';
 import '../../services/settings_service.dart';
 import '../../services/budget_data_service.dart';
 import '../../services/expense_notifier.dart';
+import '../../services/data_export_service.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_bottom_bar.dart';
 import '../../widgets/custom_icon_widget.dart';
@@ -29,6 +30,7 @@ class _BudgetManagementState extends State<BudgetManagement> {
   final SettingsService _settingsService = SettingsService();
   final BudgetDataService _budgetService = BudgetDataService();
   final ExpenseNotifier _expenseNotifier = ExpenseNotifier();
+  final DataExportService _exportService = DataExportService();
   String _selectedPeriod = 'Monthly';
 
   @override
@@ -663,6 +665,205 @@ class _BudgetManagementState extends State<BudgetManagement> {
     );
   }
 
+  void _showDeleteConfirmationDialog(String categoryName) {
+    final theme = Theme.of(context);
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Delete Budget', style: theme.textTheme.titleLarge),
+          content: Text(
+            'Are you sure you want to delete the budget for "$categoryName"? This action cannot be undone.',
+            style: theme.textTheme.bodyMedium,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                HapticFeedback.mediumImpact();
+                Navigator.pop(context);
+
+                try {
+                  await _budgetService.deleteCategoryBudget(categoryName);
+                  await _loadBudgetData();
+
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('"$categoryName" budget deleted'),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Failed to delete budget: $e'),
+                        behavior: SnackBarBehavior.floating,
+                        backgroundColor: theme.colorScheme.error,
+                      ),
+                    );
+                  }
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFD32F2F),
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showExportMenu() {
+    final theme = Theme.of(context);
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: theme.colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              margin: const EdgeInsets.only(top: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.onSurfaceVariant.withValues(
+                  alpha: 0.4,
+                ),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Export Budget Report',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ListTile(
+                    leading: CustomIconWidget(
+                      iconName: 'picture_as_pdf',
+                      color: theme.colorScheme.primary,
+                      size: 24,
+                    ),
+                    title: Text(
+                      'Export as PDF',
+                      style: theme.textTheme.bodyLarge,
+                    ),
+                    subtitle: Text(
+                      'Budget report with details',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                    onTap: () async {
+                      Navigator.pop(context);
+                      try {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Generating PDF report...'),
+                            behavior: SnackBarBehavior.floating,
+                            duration: Duration(seconds: 1),
+                          ),
+                        );
+                        final filePath = await _exportService.exportAsPDF();
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'PDF exported successfully to: $filePath',
+                              ),
+                              behavior: SnackBarBehavior.floating,
+                              duration: const Duration(seconds: 3),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Export failed: $e'),
+                              behavior: SnackBarBehavior.floating,
+                              backgroundColor: theme.colorScheme.error,
+                            ),
+                          );
+                        }
+                      }
+                    },
+                  ),
+                  ListTile(
+                    leading: CustomIconWidget(
+                      iconName: 'table_chart',
+                      color: theme.colorScheme.primary,
+                      size: 24,
+                    ),
+                    title: Text(
+                      'Export as CSV',
+                      style: theme.textTheme.bodyLarge,
+                    ),
+                    subtitle: Text(
+                      'Budget data for analysis',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                    onTap: () async {
+                      Navigator.pop(context);
+                      try {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Generating CSV file...'),
+                            behavior: SnackBarBehavior.floating,
+                            duration: Duration(seconds: 1),
+                          ),
+                        );
+                        final filePath = await _exportService.exportAsCSV();
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'CSV exported successfully to: $filePath',
+                              ),
+                              behavior: SnackBarBehavior.floating,
+                              duration: const Duration(seconds: 3),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Export failed: $e'),
+                              behavior: SnackBarBehavior.floating,
+                              backgroundColor: theme.colorScheme.error,
+                            ),
+                          );
+                        }
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   String _getMonthYearString() {
     final months = [
       'January',
@@ -689,7 +890,17 @@ class _BudgetManagementState extends State<BudgetManagement> {
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: CustomAppBarFactory.standard(
         title: 'Budget Management',
+        centerTitle: false,
         actions: [
+          IconButton(
+            icon: CustomIconWidget(
+              iconName: 'download',
+              color: theme.colorScheme.onSurface,
+              size: 24,
+            ),
+            onPressed: _showExportMenu,
+            tooltip: 'Export Report',
+          ),
           IconButton(
             icon: CustomIconWidget(
               iconName: _alertsEnabled
@@ -894,6 +1105,9 @@ class _BudgetManagementState extends State<BudgetManagement> {
                                   );
                                 },
                                 onSetAlert: () => _showAlertSettingsDialog(),
+                                onDelete: () => _showDeleteConfirmationDialog(
+                                  category["categoryName"],
+                                ),
                               );
                             },
                           ),

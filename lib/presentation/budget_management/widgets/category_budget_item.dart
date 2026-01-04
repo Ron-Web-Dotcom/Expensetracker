@@ -17,6 +17,7 @@ class CategoryBudgetItem extends StatelessWidget {
   final VoidCallback onAdjustLimit;
   final VoidCallback onViewTransactions;
   final VoidCallback onSetAlert;
+  final VoidCallback onDelete;
 
   const CategoryBudgetItem({
     super.key,
@@ -29,6 +30,7 @@ class CategoryBudgetItem extends StatelessWidget {
     required this.onAdjustLimit,
     required this.onViewTransactions,
     required this.onSetAlert,
+    required this.onDelete,
   });
 
   @override
@@ -73,6 +75,16 @@ class CategoryBudgetItem extends StatelessWidget {
             foregroundColor: Colors.white,
             icon: Icons.notifications,
             label: 'Alert',
+          ),
+          SlidableAction(
+            onPressed: (_) {
+              HapticFeedback.mediumImpact();
+              onDelete();
+            },
+            backgroundColor: const Color(0xFFD32F2F),
+            foregroundColor: Colors.white,
+            icon: Icons.delete,
+            label: 'Delete',
           ),
         ],
       ),

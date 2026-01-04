@@ -97,6 +97,7 @@ class _AddExpenseState extends State<AddExpense> {
         _receiptPhotos = List<String>.from(
           args['receiptPhotos'] as List? ?? [],
         );
+        _enableLocation = args['hasLocation'] as bool? ?? false;
         setState(() {});
       }
     }

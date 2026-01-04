@@ -41,7 +41,6 @@ class _ExpenseDashboardState extends State<ExpenseDashboard> {
   // Mock data for dashboard - starts empty
   final Map<String, dynamic> _dashboardData = {
     "userName": "User",
-    "currentDate": DateFormat('MMMM d, y').format(DateTime.now()),
     "monthlySpending": 0.0,
     "monthlyBudget": 0.0,
     "spendingPercentage": 0.0,
@@ -265,7 +264,6 @@ class _ExpenseDashboardState extends State<ExpenseDashboard> {
                   // Greeting Header
                   GreetingHeaderWidget(
                     userName: _dashboardData["userName"] as String,
-                    currentDate: _dashboardData["currentDate"] as String,
                   ),
 
                   SizedBox(height: 2.h),

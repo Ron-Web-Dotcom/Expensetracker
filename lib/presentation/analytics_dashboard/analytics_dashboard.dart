@@ -4,6 +4,7 @@ import 'package:sizer/sizer.dart';
 import '../../core/app_export.dart';
 import '../../services/analytics_service.dart';
 import '../../services/expense_notifier.dart';
+import '../../services/data_export_service.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_bottom_bar.dart';
 import '../../widgets/custom_icon_widget.dart';
@@ -24,6 +25,7 @@ class AnalyticsDashboard extends StatefulWidget {
 class _AnalyticsDashboardState extends State<AnalyticsDashboard> {
   final AnalyticsService _analytics = AnalyticsService();
   final ExpenseNotifier _expenseNotifier = ExpenseNotifier();
+  final DataExportService _exportService = DataExportService();
   String _selectedPeriod = 'This Month';
   Map<String, dynamic> _analyticsSummary = {};
 
@@ -121,14 +123,39 @@ class _AnalyticsDashboardState extends State<AnalyticsDashboard> {
                       'Detailed report with charts',
                       style: theme.textTheme.bodySmall,
                     ),
-                    onTap: () {
+                    onTap: () async {
                       Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('PDF report exported successfully'),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
+                      try {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Generating PDF report...'),
+                            behavior: SnackBarBehavior.floating,
+                            duration: Duration(seconds: 1),
+                          ),
+                        );
+                        final filePath = await _exportService.exportAsPDF();
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'PDF exported successfully to: $filePath',
+                              ),
+                              behavior: SnackBarBehavior.floating,
+                              duration: const Duration(seconds: 3),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Export failed: $e'),
+                              behavior: SnackBarBehavior.floating,
+                              backgroundColor: theme.colorScheme.error,
+                            ),
+                          );
+                        }
+                      }
                     },
                   ),
                   ListTile(
@@ -145,14 +172,39 @@ class _AnalyticsDashboardState extends State<AnalyticsDashboard> {
                       'Raw data for analysis',
                       style: theme.textTheme.bodySmall,
                     ),
-                    onTap: () {
+                    onTap: () async {
                       Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('CSV file exported successfully'),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
+                      try {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Generating CSV file...'),
+                            behavior: SnackBarBehavior.floating,
+                            duration: Duration(seconds: 1),
+                          ),
+                        );
+                        final filePath = await _exportService.exportAsCSV();
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'CSV exported successfully to: $filePath',
+                              ),
+                              behavior: SnackBarBehavior.floating,
+                              duration: const Duration(seconds: 3),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Export failed: $e'),
+                              behavior: SnackBarBehavior.floating,
+                              backgroundColor: theme.colorScheme.error,
+                            ),
+                          );
+                        }
+                      }
                     },
                   ),
                 ],

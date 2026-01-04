@@ -283,17 +283,15 @@ class _TransactionHistoryState extends State<TransactionHistory> {
       '/add-expense',
       arguments: {
         'isEdit': true,
-        'transaction': {
-          'id': transaction['id'],
-          'amount': amount.abs(),
-          'category': transaction['category'],
-          'description': transaction['description'],
-          'date': transaction['date'],
-          'paymentMethod': transaction['paymentMethod'],
-          'receiptPhotos': transaction['receiptPhotos'] ?? [],
-          'hasLocation': transaction['hasLocation'] ?? false,
-          'transactionType': transactionType,
-        },
+        'transactionId': transaction['id'],
+        'amount': amount.abs(),
+        'category': transaction['category'],
+        'description': transaction['description'],
+        'date': transaction['date'],
+        'paymentMethod': transaction['paymentMethod'],
+        'receiptPhotos': transaction['receiptPhotos'] ?? [],
+        'hasLocation': transaction['hasLocation'] ?? false,
+        'transactionType': transactionType,
       },
     );
   }
@@ -307,13 +305,16 @@ class _TransactionHistoryState extends State<TransactionHistory> {
       final transactionType =
           transaction['transactionType'] as String? ??
           (amount > 0 ? 'income' : 'expense');
+      final description =
+          transaction['description'] as String? ??
+          transaction['category'] as String;
 
       await expenseService.saveExpense(
         amount: amount.abs(),
         category: transaction['category'] as String,
         date: DateTime.now(),
         paymentMethod: transaction['paymentMethod'] as String? ?? 'Cash',
-        description: '${transaction['description']} (Copy)',
+        description: '$description (Copy)',
         receiptPhotos: transaction['receiptPhotos'] as List<String>? ?? [],
         hasLocation: transaction['hasLocation'] as bool? ?? false,
         transactionType: transactionType,
