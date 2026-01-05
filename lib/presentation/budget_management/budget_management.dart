@@ -4,14 +4,13 @@ import 'package:sizer/sizer.dart';
 
 import '../../core/app_export.dart';
 import '../../services/analytics_service.dart';
+import '../../services/budget_data_service.dart';
+import '../../services/data_export_service.dart';
+import '../../services/expense_notifier.dart';
 import '../../services/notification_service.dart';
 import '../../services/settings_service.dart';
-import '../../services/budget_data_service.dart';
-import '../../services/expense_notifier.dart';
-import '../../services/data_export_service.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_bottom_bar.dart';
-import '../../widgets/custom_icon_widget.dart';
 import './widgets/budget_overview_card.dart';
 import './widgets/budget_period_selector.dart';
 import './widgets/category_budget_item.dart';
@@ -970,9 +969,11 @@ class _BudgetManagementState extends State<BudgetManagement> {
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: CustomAppBarFactory.standard(
+      appBar: CustomAppBarFactory.withBack(
         title: _getBudgetTitle(),
-        centerTitle: false,
+        onBackPressed: () {
+          Navigator.pushReplacementNamed(context, AppRoutes.expenseDashboard);
+        },
         actions: [
           IconButton(
             icon: CustomIconWidget(

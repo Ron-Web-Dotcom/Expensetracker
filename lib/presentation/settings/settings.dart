@@ -487,70 +487,14 @@ class _SettingsState extends State<Settings> {
               ),
               SizedBox(height: 2.h),
 
-              // Data management section
+              // Analytics & Insights Section
               SettingsSectionWidget(
-                title: tr['DATA MANAGEMENT'] ?? "DATA MANAGEMENT",
+                title: tr['Analytics & Insights'] ?? 'Analytics & Insights',
                 children: [
                   SettingsItemWidget(
-                    title: tr['Export Data'] ?? "Export Data",
-                    subtitle:
-                        tr['Download your data as CSV'] ??
-                        "Download your data as CSV",
-                    leadingIcon: 'file_download',
-                    trailing: CustomIconWidget(
-                      iconName: 'chevron_right',
-                      color: isDark
-                          ? const Color(0xFFB0B0B0)
-                          : const Color(0xFF757575),
-                      size: 5.w,
-                    ),
-                    onTap: () => _showExportDialog(context),
-                  ),
-                  SettingsItemWidget(
-                    title: tr['Clear All Data'] ?? "Clear All Data",
-                    subtitle:
-                        tr['Permanently delete all transactions'] ??
-                        "Permanently delete all transactions",
-                    leadingIcon: 'delete_forever',
-                    trailing: CustomIconWidget(
-                      iconName: 'chevron_right',
-                      color: theme.colorScheme.error,
-                      size: 5.w,
-                    ),
-                    onTap: () => _showClearDataDialog(context),
-                    showDivider: false,
-                  ),
-                ],
-              ),
-              SizedBox(height: 2.h),
-
-              // Help & Support section
-              SettingsSectionWidget(
-                title: tr['HELP & SUPPORT'] ?? "HELP & SUPPORT",
-                children: [
-                  SettingsItemWidget(
-                    title: tr['Help Center'] ?? "Help Center",
-                    subtitle:
-                        tr['Browse articles and FAQs'] ??
-                        "Browse articles and FAQs",
-                    leadingIcon: 'help',
-                    trailing: CustomIconWidget(
-                      iconName: 'chevron_right',
-                      color: isDark
-                          ? const Color(0xFFB0B0B0)
-                          : const Color(0xFF757575),
-                      size: 5.w,
-                    ),
-                    onTap: () {
-                      Navigator.pushNamed(context, AppRoutes.helpCenter);
-                    },
-                  ),
-                  SettingsItemWidget(
-                    title: tr['Interactive Tutorial'] ?? "Interactive Tutorial",
-                    subtitle:
-                        tr['Learn app features step-by-step'] ??
-                        "Learn app features step-by-step",
-                    leadingIcon: 'school',
+                    title: 'Analytics Dashboard',
+                    subtitle: 'View your spending insights and trends',
+                    leadingIcon: 'analytics',
                     trailing: CustomIconWidget(
                       iconName: 'chevron_right',
                       color: isDark
@@ -561,69 +505,7 @@ class _SettingsState extends State<Settings> {
                     onTap: () {
                       Navigator.pushNamed(
                         context,
-                        AppRoutes.interactiveTutorial,
-                      );
-                    },
-                  ),
-                  SettingsItemWidget(
-                    title: tr['User Guide Library'] ?? "User Guide Library",
-                    subtitle:
-                        tr['Access comprehensive documentation'] ??
-                        "Access comprehensive documentation",
-                    leadingIcon: 'menu_book',
-                    trailing: CustomIconWidget(
-                      iconName: 'chevron_right',
-                      color: isDark
-                          ? const Color(0xFFB0B0B0)
-                          : const Color(0xFF757575),
-                      size: 5.w,
-                    ),
-                    onTap: () {
-                      Navigator.pushNamed(context, AppRoutes.userGuideLibrary);
-                    },
-                    showDivider: false,
-                  ),
-                ],
-              ),
-              SizedBox(height: 2.h),
-
-              // Admin Analytics section
-              SettingsSectionWidget(
-                title: 'ADMIN ANALYTICS',
-                children: [
-                  SettingsItemWidget(
-                    title: 'Analytics Admin Dashboard',
-                    subtitle: 'Real-time metrics and performance insights',
-                    leadingIcon: 'admin_panel_settings',
-                    trailing: CustomIconWidget(
-                      iconName: 'chevron_right',
-                      color: isDark
-                          ? const Color(0xFFB0B0B0)
-                          : const Color(0xFF757575),
-                      size: 5.w,
-                    ),
-                    onTap: () {
-                      Navigator.pushNamed(
-                        context,
-                        AppRoutes.analyticsAdminDashboard,
-                      );
-                    },
-                  ),
-                  SettingsItemWidget(
-                    title: 'User Behavior Analytics',
-                    subtitle: 'Deep dive into user interactions and patterns',
-                    leadingIcon: 'psychology',
-                    trailing: CustomIconWidget(
-                      iconName: 'chevron_right',
-                      color: isDark
-                          ? const Color(0xFFB0B0B0)
-                          : const Color(0xFF757575),
-                      size: 5.w,
-                    ),
-                    onTap: () {
-                      Navigator.pushNamed(
-                        context,
-                        AppRoutes.userBehaviorAnalytics,
+                        AppRoutes.analyticsDashboard,
                       );
                     },
                     showDivider: false,
@@ -1518,7 +1400,7 @@ class _SettingsState extends State<Settings> {
     if (mounted) {
       Navigator.pushNamedAndRemoveUntil(
         context,
-        AppRoutes.biometricAuth,
+        AppRoutes.onboarding,
         (route) => false,
       );
     }
@@ -1741,7 +1623,7 @@ class _SettingsState extends State<Settings> {
                 if (mounted) {
                   Navigator.pushNamedAndRemoveUntil(
                     context,
-                    AppRoutes.biometricAuth,
+                    AppRoutes.onboarding,
                     (route) => false,
                   );
                 }

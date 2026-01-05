@@ -8,6 +8,7 @@ import '../../services/analytics_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/settings_service.dart';
 import '../../services/expense_data_service.dart';
+import '../../services/budget_data_service.dart';
 import './widgets/amount_input_widget.dart';
 import './widgets/category_selector_widget.dart';
 import './widgets/date_picker_widget.dart';
@@ -30,6 +31,7 @@ class _AddExpenseState extends State<AddExpense> {
   final NotificationService _notificationService = NotificationService();
   final SettingsService _settingsService = SettingsService();
   final ExpenseDataService _expenseDataService = ExpenseDataService();
+  final BudgetDataService _budgetDataService = BudgetDataService();
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
@@ -330,52 +332,54 @@ class _AddExpenseState extends State<AddExpense> {
 
     final expenseAmount = double.parse(_amountController.text);
 
-    // Mock budget data - in a real app, this would come from a database
-    final Map<String, double> categoryBudgets = {
-      'Food & Dining': 600.0,
-      'Transportation': 400.0,
-      'Shopping': 500.0,
-      'Housing': 800.0,
-      'Entertainment': 300.0,
-      'Healthcare': 200.0,
-      'Utilities': 250.0,
-      'Education': 400.0,
-    };
+    // Get real budget data from service
+    final now = DateTime.now();
+    final startOfMonth = DateTime(now.year, now.month, 1);
+    final endOfMonth = DateTime(now.year, now.month + 1, 0);
 
-    final Map<String, double> categorySpent = {
-      'Food & Dining': 485.0,
-      'Transportation': 320.0,
-      'Shopping': 450.0,
-      'Housing': 800.0,
-      'Entertainment': 95.0,
-      'Healthcare': 0.0,
-      'Utilities': 180.0,
-      'Education': 250.0,
-    };
-
-    // Update spent amount for the selected category
-    if (categoryBudgets.containsKey(_selectedCategory)) {
-      final currentSpent = categorySpent[_selectedCategory!] ?? 0.0;
-      final newSpent = currentSpent + expenseAmount;
-      final budget = categoryBudgets[_selectedCategory!]!;
-
-      await _notificationService.checkAndSendBudgetAlert(
-        spent: newSpent,
-        budget: budget,
-        categoryName: _selectedCategory!,
+    // Get category budget and spending
+    if (_selectedCategory != null) {
+      final allBudgets = await _budgetDataService.getAllCategoryBudgets();
+      final categoryBudgetData = allBudgets.firstWhere(
+        (b) => b['categoryName'] == _selectedCategory,
+        orElse: () => {},
       );
+
+      if (categoryBudgetData.isNotEmpty) {
+        final categoryBudget = (categoryBudgetData['budgetLimit'] as num)
+            .toDouble();
+        final categorySpent = await _expenseDataService.getSpendingByCategory(
+          startDate: startOfMonth,
+          endDate: endOfMonth,
+        );
+
+        final currentSpent = (categorySpent[_selectedCategory!] ?? 0.0).abs();
+        final newSpent = currentSpent + expenseAmount;
+
+        await _notificationService.checkAndSendBudgetAlert(
+          spent: newSpent,
+          budget: categoryBudget,
+          categoryName: _selectedCategory!,
+        );
+      }
     }
 
     // Check overall budget
-    final totalBudget = 3000.0;
-    final totalSpent =
-        categorySpent.values.fold(0.0, (sum, val) => sum + val) + expenseAmount;
+    final totalBudget = await _budgetDataService.getTotalBudget();
 
-    await _notificationService.checkAndSendBudgetAlert(
-      spent: totalSpent,
-      budget: totalBudget,
-      categoryName: 'Total Budget',
-    );
+    if (totalBudget > 0) {
+      final totalSpent = await _expenseDataService.getTotalSpending(
+        startDate: startOfMonth,
+        endDate: endOfMonth,
+      );
+      final newTotalSpent = totalSpent + expenseAmount;
+
+      await _notificationService.checkAndSendBudgetAlert(
+        spent: newTotalSpent,
+        budget: totalBudget,
+        categoryName: 'Total Budget',
+      );
+    }
   }
 
   void _handleCancel() {

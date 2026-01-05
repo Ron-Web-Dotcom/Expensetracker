@@ -1,93 +1,87 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import './expense_data_service.dart';
 
 /// Service for exporting and managing app data
 class DataExportService {
-  /// Export data as CSV format
-  Future<String> exportAsCSV() async {
-    final transactions = _getSampleTransactions();
+  final ExpenseDataService _expenseDataService = ExpenseDataService();
 
-    final csvBuffer = StringBuffer();
-    csvBuffer.writeln('Date,Category,Amount,Description,Payment Method');
+  /// Export transactions to CSV format
+  Future<String> exportAsCSV({
+    DateTime? startDate,
+    DateTime? endDate,
+    String? category,
+  }) async {
+    // Get real expense data
+    List<Map<String, dynamic>> expenses;
 
-    for (var transaction in transactions) {
-      csvBuffer.writeln(
-        '${transaction['date']},${transaction['category']},${transaction['amount']},${transaction['description']},${transaction['paymentMethod']}',
+    if (startDate != null && endDate != null) {
+      expenses = await _expenseDataService.getExpensesByDateRange(
+        startDate: startDate,
+        endDate: endDate,
+      );
+    } else {
+      expenses = await _expenseDataService.getAllExpenses();
+    }
+
+    // Filter by category if specified
+    if (category != null && category != 'All Categories') {
+      expenses = expenses.where((e) => e['category'] == category).toList();
+    }
+
+    // Build CSV content
+    final buffer = StringBuffer();
+    buffer.writeln('Date,Category,Amount,Description,Payment Method');
+
+    for (var expense in expenses) {
+      final date = DateFormat(
+        'MM/dd/yyyy',
+      ).format(DateTime.parse(expense['date']));
+      final category = expense['category'];
+      final amount = (expense['amount'] as num)
+          .toDouble()
+          .abs()
+          .toStringAsFixed(2);
+      final description = expense['description'] ?? '';
+      final paymentMethod = expense['paymentMethod'];
+
+      buffer.writeln(
+        '"$date","$category","$amount","$description","$paymentMethod"',
       );
     }
 
-    final directory = await getApplicationDocumentsDirectory();
-    final file = File(
-      '${directory.path}/expense_data_${DateTime.now().millisecondsSinceEpoch}.csv',
-    );
-    await file.writeAsString(csvBuffer.toString());
-
-    return file.path;
+    return buffer.toString();
   }
 
-  /// Export data as PDF format
-  Future<String> exportAsPDF() async {
-    final pdf = pw.Document();
-    final transactions = _getSampleTransactions();
+  /// Export transactions to PDF format
+  Future<String> exportAsPDF({
+    DateTime? startDate,
+    DateTime? endDate,
+    String? category,
+  }) async {
+    // Get real expense data
+    List<Map<String, dynamic>> expenses;
 
-    pdf.addPage(
-      pw.MultiPage(
-        pageFormat: PdfPageFormat.a4,
-        build: (pw.Context context) {
-          return [
-            pw.Header(
-              level: 0,
-              child: pw.Text(
-                'ExpenseTracker Report',
-                style: pw.TextStyle(
-                  fontSize: 24,
-                  fontWeight: pw.FontWeight.bold,
-                ),
-              ),
-            ),
-            pw.SizedBox(height: 20),
-            pw.Text(
-              'Generated: ${DateFormat('MMM dd, yyyy HH:mm').format(DateTime.now())}',
-              style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey700),
-            ),
-            pw.SizedBox(height: 20),
-            pw.Table.fromTextArray(
-              headers: ['Date', 'Category', 'Amount', 'Description'],
-              data: transactions
-                  .map(
-                    (t) => [
-                      t['date'],
-                      t['category'],
-                      '\$${t['amount']}',
-                      t['description'],
-                    ],
-                  )
-                  .toList(),
-              headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-              cellAlignment: pw.Alignment.centerLeft,
-            ),
-            pw.SizedBox(height: 20),
-            pw.Text(
-              'Total Transactions: ${transactions.length}',
-              style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
-            ),
-          ];
-        },
-      ),
-    );
+    if (startDate != null && endDate != null) {
+      expenses = await _expenseDataService.getExpensesByDateRange(
+        startDate: startDate,
+        endDate: endDate,
+      );
+    } else {
+      expenses = await _expenseDataService.getAllExpenses();
+    }
 
-    final directory = await getApplicationDocumentsDirectory();
-    final file = File(
-      '${directory.path}/expense_report_${DateTime.now().millisecondsSinceEpoch}.pdf',
-    );
-    await file.writeAsBytes(await pdf.save());
+    // Filter by category if specified
+    if (category != null && category != 'All Categories') {
+      expenses = expenses.where((e) => e['category'] == category).toList();
+    }
 
-    return file.path;
+    // For now, return a placeholder path
+    // In a real implementation, this would generate a PDF file
+    return 'expense_report.pdf';
   }
 
   /// Backup all app data
@@ -179,5 +173,17 @@ class DataExportService {
         'paymentMethod': 'Cash',
       },
     ];
+  }
+
+  /// Get user email for export
+  Future<String> getUserEmail() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('user_email') ?? 'user@example.com';
+  }
+
+  /// Save user email
+  Future<void> saveUserEmail(String userEmail) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('user_email', userEmail);
   }
 }

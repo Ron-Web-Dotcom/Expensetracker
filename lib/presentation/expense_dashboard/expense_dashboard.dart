@@ -149,15 +149,39 @@ class _ExpenseDashboardState extends State<ExpenseDashboard> {
         .isWeeklySummaryEnabled();
     if (!weeklySummaryEnabled) return;
 
-    // Mock weekly data - in a real app, this would come from a database
-    final totalSpent = _dashboardData['monthlySpending'] as double;
-    final transactionCount =
-        (_dashboardData['recentTransactions'] as List).length;
+    // Get real weekly data from service
+    final now = DateTime.now();
+    final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+    final endOfWeek = startOfWeek.add(const Duration(days: 6));
+
+    final totalSpent = await _expenseDataService.getTotalSpending(
+      startDate: startOfWeek,
+      endDate: endOfWeek,
+    );
+
+    final allExpenses = await _expenseDataService.getExpensesByDateRange(
+      startDate: startOfWeek,
+      endDate: endOfWeek,
+    );
+    final transactionCount = allExpenses.length;
+
+    // Get top category from real data
+    final categorySpending = await _expenseDataService.getSpendingByCategory(
+      startDate: startOfWeek,
+      endDate: endOfWeek,
+    );
+
+    String topCategory = 'General';
+    if (categorySpending.isNotEmpty) {
+      topCategory = categorySpending.entries
+          .reduce((a, b) => a.value.abs() > b.value.abs() ? a : b)
+          .key;
+    }
 
     await _notificationService.scheduleWeeklySummary(
       totalSpent: totalSpent,
       transactionCount: transactionCount,
-      topCategory: 'Food & Dining',
+      topCategory: topCategory,
     );
   }
 

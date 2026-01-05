@@ -5,6 +5,7 @@ import 'package:sizer/sizer.dart';
 
 import '../../core/app_export.dart';
 import '../../services/analytics_service.dart';
+import '../../services/expense_data_service.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_icon_widget.dart';
 import './widgets/receipt_grid_item_widget.dart';
@@ -23,6 +24,7 @@ class ReceiptManagement extends StatefulWidget {
 
 class _ReceiptManagementState extends State<ReceiptManagement> {
   final AnalyticsService _analytics = AnalyticsService();
+  final ExpenseDataService _expenseDataService = ExpenseDataService();
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
@@ -55,58 +57,30 @@ class _ReceiptManagementState extends State<ReceiptManagement> {
 
     await Future.delayed(const Duration(milliseconds: 800));
 
-    _allReceipts = _generateMockReceipts();
+    // Load real receipts from expense data
+    final allExpenses = await _expenseDataService.getAllExpenses();
+
+    _allReceipts = allExpenses
+        .where((expense) => (expense['receiptPhotos'] as List).isNotEmpty)
+        .map((expense) {
+          final receiptPhotos = expense['receiptPhotos'] as List;
+          return {
+            'id': expense['id'],
+            'merchant': expense['description'] ?? 'Unknown',
+            'amount': (expense['amount'] as num).toDouble().abs(),
+            'date': DateTime.parse(expense['date']),
+            'category': expense['category'],
+            'imageUrl': receiptPhotos.isNotEmpty ? receiptPhotos[0] : '',
+            'ocrText':
+                'Receipt from ${expense['description'] ?? 'Unknown'}. Total: \$${(expense['amount'] as num).toDouble().abs().toStringAsFixed(2)}',
+          };
+        })
+        .toList();
+
     _filteredReceipts = List.from(_allReceipts);
     _applySorting();
 
     setState(() => _isLoading = false);
-  }
-
-  List<Map<String, dynamic>> _generateMockReceipts() {
-    final List<String> merchants = [
-      'Whole Foods Market',
-      'Shell Gas Station',
-      'Amazon',
-      'Starbucks',
-      'Target',
-      'Walmart',
-      'Best Buy',
-      'Home Depot',
-      'CVS Pharmacy',
-      'McDonald\'s',
-    ];
-
-    final List<String> categories = [
-      'Food & Dining',
-      'Transportation',
-      'Shopping',
-      'Entertainment',
-      'Bills & Utilities',
-    ];
-
-    final List<String> receiptImages = [
-      'https://images.unsplash.com/photo-1554224311-beee460c201f?w=400',
-      'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400',
-      'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=400',
-      'https://images.unsplash.com/photo-1554224154-26032ffc0d07?w=400',
-      'https://images.unsplash.com/photo-1612198188060-c7c2a3b66eae?w=400',
-    ];
-
-    return List.generate(25, (index) {
-      final date = DateTime.now().subtract(Duration(days: index * 2));
-      final amount = (10 + (index * 15.5)) % 500 + 5.99;
-
-      return {
-        'id': 'receipt_$index',
-        'merchant': merchants[index % merchants.length],
-        'amount': amount,
-        'date': date,
-        'category': categories[index % categories.length],
-        'imageUrl': receiptImages[index % receiptImages.length],
-        'ocrText':
-            'Receipt from ${merchants[index % merchants.length]}. Total: \$${amount.toStringAsFixed(2)}',
-      };
-    });
   }
 
   void _onSearchChanged(String query) {

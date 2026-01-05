@@ -117,11 +117,7 @@ class _TransactionHistoryState extends State<TransactionHistory> {
 
     await Future.delayed(const Duration(milliseconds: 500));
 
-    final moreTransactions = _generateMockTransactions(page: _currentPage + 1);
-    _allTransactions.addAll(moreTransactions);
-    _applyFilters();
-    _currentPage++;
-
+    // No more transactions to load - all real data is already loaded
     setState(() => _isLoadingMore = false);
   }
 
