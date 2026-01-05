@@ -37,80 +37,109 @@ class _MonthlyComparisonWidgetState extends State<MonthlyComparisonWidget> {
     setState(() => _isLoading = true);
 
     final now = DateTime.now();
-    final thisMonthStart = DateTime(now.year, now.month, 1);
-    final thisMonthEnd = now;
-    final lastMonthStart = DateTime(now.year, now.month - 1, 1);
-    final lastMonthEnd = DateTime(now.year, now.month, 0);
+    DateTime currentStart, currentEnd, previousStart, previousEnd;
+    String periodLabel, previousLabel;
+    int daysInPeriod;
 
-    final thisMonthTotal = await _expenseDataService.getTotalSpending(
-      startDate: thisMonthStart,
-      endDate: thisMonthEnd,
+    if (widget.period == 'Week') {
+      // Current week (Monday to today)
+      currentStart = now.subtract(Duration(days: now.weekday - 1));
+      currentEnd = now;
+      // Previous week
+      previousStart = currentStart.subtract(const Duration(days: 7));
+      previousEnd = currentStart.subtract(const Duration(days: 1));
+      periodLabel = 'This Week';
+      previousLabel = 'vs last week';
+      daysInPeriod = 7;
+    } else if (widget.period == 'Month') {
+      // Current month
+      currentStart = DateTime(now.year, now.month, 1);
+      currentEnd = now;
+      // Previous month
+      previousStart = DateTime(now.year, now.month - 1, 1);
+      previousEnd = DateTime(now.year, now.month, 0);
+      periodLabel = 'This Month';
+      previousLabel = 'vs last month';
+      daysInPeriod = DateTime(now.year, now.month + 1, 0).day;
+    } else {
+      // Current year
+      currentStart = DateTime(now.year, 1, 1);
+      currentEnd = now;
+      // Previous year
+      previousStart = DateTime(now.year - 1, 1, 1);
+      previousEnd = DateTime(now.year - 1, 12, 31);
+      periodLabel = 'This Year';
+      previousLabel = 'vs last year';
+      daysInPeriod = 365;
+    }
+
+    final currentTotal = await _expenseDataService.getTotalSpending(
+      startDate: currentStart,
+      endDate: currentEnd,
     );
 
-    final lastMonthTotal = await _expenseDataService.getTotalSpending(
-      startDate: lastMonthStart,
-      endDate: lastMonthEnd,
+    final previousTotal = await _expenseDataService.getTotalSpending(
+      startDate: previousStart,
+      endDate: previousEnd,
     );
 
     final dailySpending = await _expenseDataService.getDailySpending(
-      startDate: thisMonthStart,
-      endDate: thisMonthEnd,
+      startDate: currentStart,
+      endDate: currentEnd,
     );
 
     final daysWithData = dailySpending.values.where((v) => v > 0).length;
-    final averageDaily = daysWithData > 0 ? thisMonthTotal / daysWithData : 0.0;
+    final averageDaily = daysWithData > 0 ? currentTotal / daysWithData : 0.0;
 
     final highestDay = dailySpending.values.isEmpty
         ? 0.0
         : dailySpending.values.reduce((a, b) => a > b ? a : b);
 
-    final lastMonthAverage = lastMonthTotal / lastMonthEnd.day;
-    final monthChange = lastMonthTotal > 0
-        ? ((thisMonthTotal - lastMonthTotal) / lastMonthTotal * 100)
+    final previousDaysCount = previousEnd.difference(previousStart).inDays + 1;
+    final previousAverage = previousDaysCount > 0
+        ? previousTotal / previousDaysCount
         : 0.0;
 
-    final dailyChange = lastMonthAverage > 0
-        ? ((averageDaily - lastMonthAverage) / lastMonthAverage * 100)
+    final periodChange = previousTotal > 0
+        ? ((currentTotal - previousTotal) / previousTotal * 100)
         : 0.0;
 
-    final budget = 2000.0;
-    final budgetUsed = budget > 0 ? (thisMonthTotal / budget * 100) : 0.0;
-    final budgetRemaining = budget - thisMonthTotal;
+    final dailyChange = previousAverage > 0
+        ? ((averageDaily - previousAverage) / previousAverage * 100)
+        : 0.0;
 
-    final List<Map<String, dynamic>> data = [
-      {
-        "title": "This Month",
-        "amount": "\$${thisMonthTotal.toStringAsFixed(0)}",
-        "change":
-            "${monthChange >= 0 ? '+' : ''}${monthChange.toStringAsFixed(1)}%",
-        "isPositive": monthChange <= 0,
-        "subtitle": "vs last month",
-      },
-      {
-        "title": "Average Daily",
-        "amount": "\$${averageDaily.toStringAsFixed(2)}",
-        "change":
-            "${dailyChange >= 0 ? '+' : ''}${dailyChange.toStringAsFixed(1)}%",
-        "isPositive": dailyChange <= 0,
-        "subtitle": "vs last month",
-      },
-      {
-        "title": "Highest Day",
-        "amount": "\$${highestDay.toStringAsFixed(0)}",
-        "change": daysWithData > 0 ? "${now.day} days tracked" : "No data",
-        "isPositive": true,
-        "subtitle": daysWithData > 0 ? "This month" : "Add expenses",
-      },
-      {
-        "title": "Budget Status",
-        "amount": "${budgetUsed.toStringAsFixed(0)}%",
-        "change": budgetUsed < 100 ? "On track" : "Over budget",
-        "isPositive": budgetUsed < 80,
-        "subtitle": budgetRemaining > 0
-            ? "\$${budgetRemaining.toStringAsFixed(0)} remaining"
-            : "Budget exceeded",
-      },
-    ];
+    // Only show data if there are actual expenses
+    final List<Map<String, dynamic>> data = [];
+
+    if (currentTotal > 0 || previousTotal > 0) {
+      data.addAll([
+        {
+          "title": periodLabel,
+          "amount": "\${currentTotal.toStringAsFixed(0)}",
+          "change":
+              "${periodChange >= 0 ? '+' : ''}${periodChange.toStringAsFixed(1)}%",
+          "isPositive": periodChange <= 0,
+          "subtitle": previousLabel,
+        },
+        {
+          "title": "Average Daily",
+          "amount": "\${averageDaily.toStringAsFixed(2)}",
+          "change":
+              "${dailyChange >= 0 ? '+' : ''}${dailyChange.toStringAsFixed(1)}%",
+          "isPositive": dailyChange <= 0,
+          "subtitle": previousLabel,
+        },
+        {
+          "title": "Highest Day",
+          "amount": "\${highestDay.toStringAsFixed(0)}",
+          "change": daysWithData > 0
+              ? "\$daysWithData days tracked"
+              : "No data",
+          "isPositive": true,
+          "subtitle": daysWithData > 0 ? periodLabel : "Add expenses",
+        },
+      ]);
+    }
 
     setState(() {
       _comparisonData = data;
@@ -135,7 +164,7 @@ class _MonthlyComparisonWidgetState extends State<MonthlyComparisonWidget> {
         Padding(
           padding: EdgeInsets.symmetric(horizontal: 4.w),
           child: Text(
-            'Monthly Comparison',
+            '${widget.period}ly Comparison',
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w600,
             ),

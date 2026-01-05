@@ -361,4 +361,35 @@ class NotificationService {
   Future<void> cancelNotification(int id) async {
     await _notifications.cancel(id);
   }
+
+  // Send generic notification
+  Future<void> showNotification({
+    required int id,
+    required String title,
+    required String body,
+  }) async {
+    if (!_isInitialized) await initialize();
+
+    const androidDetails = AndroidNotificationDetails(
+      'spending_alerts',
+      'Spending Alerts',
+      channelDescription: 'Notifications for spending alerts and warnings',
+      importance: Importance.high,
+      priority: Priority.high,
+      icon: '@mipmap/ic_launcher',
+    );
+
+    const iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+
+    const notificationDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    await _notifications.show(id, title, body, notificationDetails);
+  }
 }

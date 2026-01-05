@@ -348,33 +348,36 @@ class _SettingsState extends State<Settings> {
               // Notification preferences section
               SettingsSectionWidget(
                 title:
-                    tr['NOTIFICATION PREFERENCES'] ??
-                    "NOTIFICATION PREFERENCES",
+                    tr['Notification Preferences'] ??
+                    "Notification Preferences",
                 children: [
+                  SettingsItemWidget(
+                    title: tr['Smart Alerts Center'] ?? "Smart Alerts Center",
+                    subtitle:
+                        tr['Configure spending alerts & notifications'] ??
+                        "Configure spending alerts & notifications",
+                    leadingIcon: 'notifications_active',
+                    trailing: Icon(
+                      Icons.chevron_right,
+                      color: isDark
+                          ? const Color(0xFFB0B0B0)
+                          : const Color(0xFF757575),
+                    ),
+                    onTap: () {
+                      Navigator.pushNamed(context, AppRoutes.smartAlertsCenter);
+                    },
+                  ),
                   ToggleSettingsItemWidget(
                     title: tr['Budget Alerts'] ?? "Budget Alerts",
                     subtitle:
-                        tr['Get notified when approaching budget limits'] ??
-                        "Get notified when approaching budget limits",
-                    leadingIcon: 'notifications_active',
+                        tr['Notify when approaching budget limits'] ??
+                        "Notify when approaching budget limits",
+                    leadingIcon: 'account_balance_wallet',
                     value: _budgetAlertsEnabled,
                     onChanged: (value) async {
                       await _settingsService.setBudgetAlertsEnabled(value);
                       setState(() => _budgetAlertsEnabled = value);
-
-                      if (value) {
-                        _showSnackBar(
-                          "Budget alerts enabled - you'll be notified at 75% and 90% spending",
-                        );
-                      } else {
-                        await _notificationService.cancelNotification(
-                          NotificationService.budgetAlert75Id,
-                        );
-                        await _notificationService.cancelNotification(
-                          NotificationService.budgetAlert90Id,
-                        );
-                        _showSnackBar("Budget alerts disabled");
-                      }
+                      _handleSettingToggle('budget_alerts', value);
                     },
                   ),
                   ToggleSettingsItemWidget(

@@ -12,6 +12,7 @@ import '../presentation/onboarding_flow/onboarding_flow.dart';
 import '../presentation/performance_metrics_center/performance_metrics_center.dart';
 import '../presentation/receipt_camera/receipt_camera_screen.dart';
 import '../presentation/receipt_management/receipt_management.dart';
+import '../presentation/smart_alerts_center/smart_alerts_center.dart';
 import '../presentation/splash_screen/splash_screen.dart';
 import '../presentation/transaction_history/transaction_history.dart';
 import '../presentation/user_behavior_analytics/user_behavior_analytics.dart';
@@ -35,6 +36,7 @@ class AppRoutes {
   static const String interactiveTutorial = '/interactive-tutorial';
   static const String userGuideLibrary = '/user-guide-library';
   static const String performanceMetricsCenter = '/performance-metrics-center';
+  static const String smartAlertsCenter = '/smart-alerts-center';
 
   static Map<String, WidgetBuilder> get routes => {
     splash: (context) => const SplashScreen(),
@@ -53,6 +55,7 @@ class AppRoutes {
     interactiveTutorial: (context) => const InteractiveTutorial(),
     userGuideLibrary: (context) => const UserGuideLibrary(),
     performanceMetricsCenter: (context) => const PerformanceMetricsCenter(),
+    smartAlertsCenter: (context) => const SmartAlertsCenter(),
   };
 
   /// Generate route with custom animations

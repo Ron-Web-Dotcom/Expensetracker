@@ -7,6 +7,7 @@ class BudgetOverviewCard extends StatelessWidget {
   final double spentAmount;
   final double remainingAmount;
   final double spendingPercentage;
+  final String periodLabel;
 
   const BudgetOverviewCard({
     super.key,
@@ -14,6 +15,7 @@ class BudgetOverviewCard extends StatelessWidget {
     required this.spentAmount,
     required this.remainingAmount,
     required this.spendingPercentage,
+    this.periodLabel = 'Monthly Budget',
   });
 
   Color _getProgressColor(double percentage) {
@@ -58,7 +60,7 @@ class BudgetOverviewCard extends StatelessWidget {
             children: [
               Flexible(
                 child: Text(
-                  'Monthly Budget',
+                  periodLabel,
                   style: theme.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),

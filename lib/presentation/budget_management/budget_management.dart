@@ -55,7 +55,7 @@ class _BudgetManagementState extends State<BudgetManagement> {
   }
 
   int _currentBottomNavIndex = 2;
-  DateTime _currentMonth = DateTime.now();
+  DateTime _currentDate = DateTime.now();
   bool _alertsEnabled = true;
   bool _isLoading = true;
 
@@ -122,7 +122,7 @@ class _BudgetManagementState extends State<BudgetManagement> {
   }
 
   Map<String, DateTime> _getDateRangeForPeriod() {
-    final now = _currentMonth;
+    final now = _currentDate;
     DateTime start, end;
 
     switch (_selectedPeriod) {
@@ -144,7 +144,7 @@ class _BudgetManagementState extends State<BudgetManagement> {
   }
 
   Map<String, DateTime> _getPreviousPeriodDateRange() {
-    final now = _currentMonth;
+    final now = _currentDate;
     DateTime start, end;
 
     switch (_selectedPeriod) {
@@ -239,7 +239,25 @@ class _BudgetManagementState extends State<BudgetManagement> {
 
   void _navigateToPreviousMonth() {
     setState(() {
-      _currentMonth = DateTime(_currentMonth.year, _currentMonth.month - 1);
+      switch (_selectedPeriod) {
+        case 'Weekly':
+          _currentDate = _currentDate.subtract(const Duration(days: 7));
+          break;
+        case 'Yearly':
+          _currentDate = DateTime(
+            _currentDate.year - 1,
+            _currentDate.month,
+            _currentDate.day,
+          );
+          break;
+        case 'Monthly':
+        default:
+          _currentDate = DateTime(
+            _currentDate.year,
+            _currentDate.month - 1,
+            _currentDate.day,
+          );
+      }
     });
     HapticFeedback.lightImpact();
     _loadBudgetData();
@@ -247,7 +265,25 @@ class _BudgetManagementState extends State<BudgetManagement> {
 
   void _navigateToNextMonth() {
     setState(() {
-      _currentMonth = DateTime(_currentMonth.year, _currentMonth.month + 1);
+      switch (_selectedPeriod) {
+        case 'Weekly':
+          _currentDate = _currentDate.add(const Duration(days: 7));
+          break;
+        case 'Yearly':
+          _currentDate = DateTime(
+            _currentDate.year + 1,
+            _currentDate.month,
+            _currentDate.day,
+          );
+          break;
+        case 'Monthly':
+        default:
+          _currentDate = DateTime(
+            _currentDate.year,
+            _currentDate.month + 1,
+            _currentDate.day,
+          );
+      }
     });
     HapticFeedback.lightImpact();
     _loadBudgetData();
@@ -256,6 +292,7 @@ class _BudgetManagementState extends State<BudgetManagement> {
   void _onPeriodChanged(String period) {
     setState(() {
       _selectedPeriod = period;
+      _currentDate = DateTime.now();
     });
 
     if (period == 'Custom') {
@@ -864,22 +901,67 @@ class _BudgetManagementState extends State<BudgetManagement> {
     );
   }
 
+  String _getPeriodHeaderText() {
+    switch (_selectedPeriod) {
+      case 'Weekly':
+        final dateRange = _getDateRangeForPeriod();
+        final start = dateRange['start']!;
+        final end = dateRange['end']!;
+        return 'Week of ${start.month}/${start.day} - ${end.month}/${end.day}';
+      case 'Yearly':
+        return '${_currentDate.year}';
+      case 'Custom':
+        return 'Custom Period';
+      case 'Monthly':
+      default:
+        final months = [
+          'January',
+          'February',
+          'March',
+          'April',
+          'May',
+          'June',
+          'July',
+          'August',
+          'September',
+          'October',
+          'November',
+          'December',
+        ];
+        return '${months[_currentDate.month - 1]} ${_currentDate.year}';
+    }
+  }
+
+  String _getBudgetTitle() {
+    switch (_selectedPeriod) {
+      case 'Weekly':
+        return 'Weekly Budget';
+      case 'Yearly':
+        return 'Yearly Budget';
+      case 'Custom':
+        return 'Custom Budget';
+      case 'Monthly':
+      default:
+        return 'Monthly Budget';
+    }
+  }
+
+  String _getHistoricalLabel() {
+    switch (_selectedPeriod) {
+      case 'Weekly':
+        return 'Last Week';
+      case 'Yearly':
+        return 'Last Year';
+      case 'Custom':
+        return 'Previous Period';
+      case 'Monthly':
+      default:
+        return 'Last Month';
+    }
+  }
+
   String _getMonthYearString() {
-    final months = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December',
-    ];
-    return '${months[_currentMonth.month - 1]} ${_currentMonth.year}';
+    return _getPeriodHeaderText();
   }
 
   @override
@@ -889,7 +971,7 @@ class _BudgetManagementState extends State<BudgetManagement> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: CustomAppBarFactory.standard(
-        title: 'Budget Management',
+        title: _getBudgetTitle(),
         centerTitle: false,
         actions: [
           IconButton(
@@ -984,13 +1066,14 @@ class _BudgetManagementState extends State<BudgetManagement> {
                       spentAmount: _spentAmount,
                       remainingAmount: _remainingAmount,
                       spendingPercentage: _spendingPercentage,
+                      periodLabel: _getBudgetTitle(),
                     ),
 
                     // Historical Comparison
                     HistoricalComparisonCard(
                       previousPeriodSpent: _previousPeriodSpent,
                       currentPeriodSpent: _spentAmount,
-                      periodLabel: 'Last Month',
+                      periodLabel: _getHistoricalLabel(),
                     ),
 
                     // Category Budgets Section Header

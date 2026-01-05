@@ -451,7 +451,7 @@ class _AnalyticsDashboardState extends State<AnalyticsDashboard> {
               SizedBox(height: 2.h),
               MonthlyComparisonWidget(period: _selectedPeriod),
               SizedBox(height: 2.h),
-              SmartInsightsWidget(),
+              SmartInsightsWidget(period: _selectedPeriod),
               SizedBox(height: 2.h),
             ],
           ),
