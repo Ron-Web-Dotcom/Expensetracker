@@ -5,6 +5,7 @@ import 'package:sizer/sizer.dart';
 
 import '../../core/app_export.dart';
 import '../../main.dart';
+import '../../routes/app_routes.dart';
 import '../../services/analytics_service.dart';
 import '../../services/budget_data_service.dart';
 import '../../services/data_export_service.dart';
@@ -13,6 +14,8 @@ import '../../services/locale_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/settings_service.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/custom_icon_widget.dart';
+import '../login/login.dart';
 import './widgets/profile_section_widget.dart';
 import './widgets/settings_item_widget.dart';
 import './widgets/settings_section_widget.dart';
@@ -38,6 +41,7 @@ class _SettingsState extends State<Settings> {
   bool _biometricEnabled = false;
   bool _darkModeEnabled = false;
   bool _loginAlertsEnabled = true;
+  bool _dailyReminderEnabled = false;
 
   @override
   void initState() {
@@ -368,6 +372,61 @@ class _SettingsState extends State<Settings> {
                     },
                   ),
                   ToggleSettingsItemWidget(
+                    title: tr['Daily Reminders'] ?? "Daily Reminders",
+                    subtitle:
+                        tr['Get daily expense logging reminders'] ??
+                        "Get daily expense logging reminders",
+                    leadingIcon: 'alarm',
+                    value: _dailyReminderEnabled,
+                    onChanged: (value) async {
+                      await _settingsService.setDailyReminderEnabled(value);
+                      setState(() => _dailyReminderEnabled = value);
+                      _handleSettingToggle('daily_reminder', value);
+
+                      if (value) {
+                        Navigator.pushNamed(
+                          context,
+                          AppRoutes.enhancedSettings,
+                        );
+                      }
+                    },
+                  ),
+                  SettingsItemWidget(
+                    title: tr['Reminder Settings'] ?? "Reminder Settings",
+                    subtitle:
+                        tr['Configure reminder times & preferences'] ??
+                        "Configure reminder times & preferences",
+                    leadingIcon: 'settings',
+                    trailing: Icon(
+                      Icons.chevron_right,
+                      color: isDark
+                          ? const Color(0xFFB0B0B0)
+                          : const Color(0xFF757575),
+                    ),
+                    onTap: () {
+                      Navigator.pushNamed(context, AppRoutes.enhancedSettings);
+                    },
+                  ),
+                  SettingsItemWidget(
+                    title: tr['Reminder Center'] ?? "Reminder Center",
+                    subtitle:
+                        tr['View reminder history & habit tracking'] ??
+                        "View reminder history & habit tracking",
+                    leadingIcon: 'history',
+                    trailing: Icon(
+                      Icons.chevron_right,
+                      color: isDark
+                          ? const Color(0xFFB0B0B0)
+                          : const Color(0xFF757575),
+                    ),
+                    onTap: () {
+                      Navigator.pushNamed(
+                        context,
+                        '/reminder-notification-center',
+                      );
+                    },
+                  ),
+                  ToggleSettingsItemWidget(
                     title: tr['Budget Alerts'] ?? "Budget Alerts",
                     subtitle:
                         tr['Notify when approaching budget limits'] ??
@@ -568,7 +627,7 @@ class _SettingsState extends State<Settings> {
                       _analytics.trackEvent('tutorial_opened');
                       Navigator.pushNamed(
                         context,
-                        AppRoutes.interactiveTutorial,
+                        '/interactive-tutorial',
                       );
                     },
                   ),

@@ -3,11 +3,14 @@ import 'package:flutter/material.dart';
 import '../presentation/add_expense/add_expense.dart';
 import '../presentation/analytics_dashboard/analytics_dashboard.dart';
 import '../presentation/budget_management/budget_management.dart';
+import '../presentation/daily_reminder_settings/daily_reminder_settings.dart';
+import '../presentation/enhanced_settings/enhanced_settings.dart';
 import '../presentation/expense_dashboard/expense_dashboard.dart';
 import '../presentation/help_center/help_center.dart';
 import '../presentation/onboarding_flow/onboarding_flow.dart';
 import '../presentation/receipt_camera/receipt_camera_screen.dart';
 import '../presentation/receipt_management/receipt_management.dart';
+import '../presentation/reminder_notification_center/reminder_notification_center.dart';
 import '../presentation/smart_alerts_center/smart_alerts_center.dart';
 import '../presentation/splash_screen/splash_screen.dart';
 import '../presentation/transaction_history/transaction_history.dart';
@@ -27,6 +30,10 @@ class AppRoutes {
   static const String helpCenter = '/help-center';
   static const String userGuideLibrary = '/user-guide-library';
   static const String smartAlertsCenter = '/smart-alerts-center';
+  static const String enhancedSettings = '/enhanced-settings';
+  static const String dailyReminderSettings = '/daily-reminder-settings';
+  static const String reminderNotificationCenter =
+      '/reminder-notification-center';
 
   static Map<String, WidgetBuilder> get routes => {
     splash: (context) => const SplashScreen(),
@@ -41,6 +48,9 @@ class AppRoutes {
     helpCenter: (context) => const HelpCenter(),
     userGuideLibrary: (context) => const UserGuideLibrary(),
     smartAlertsCenter: (context) => const SmartAlertsCenter(),
+    enhancedSettings: (context) => const EnhancedSettings(),
+    dailyReminderSettings: (context) => const DailyReminderSettings(),
+    reminderNotificationCenter: (context) => const ReminderNotificationCenter(),
   };
 
   /// Generate route with custom animations

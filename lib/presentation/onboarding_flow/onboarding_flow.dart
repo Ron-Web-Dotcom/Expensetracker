@@ -179,7 +179,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                   // Navigation button
                   SizedBox(
                     width: double.infinity,
-                    height: 6.h,
+                    height: 7.h,
                     child: ElevatedButton(
                       onPressed: _nextPage,
                       style: ElevatedButton.styleFrom(
@@ -191,9 +191,14 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 4.w,
+                          vertical: 1.5.h,
+                        ),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
                             _currentPage == _onboardingPages.length - 1
@@ -201,7 +206,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                                 : 'Next',
                             style: theme.textTheme.labelLarge?.copyWith(
                               color: Colors.white,
-                              fontSize: 16.sp,
+                              fontSize: 15.sp,
                               fontWeight: FontWeight.w600,
                             ),
                           ),

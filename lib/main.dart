@@ -1,10 +1,14 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sizer/sizer.dart';
+import 'package:timezone/data/latest.dart' as tz;
 
 import './core/app_export.dart';
+import './routes/app_routes.dart';
 import './services/notification_service.dart';
+import './theme/app_theme.dart';
 import './widgets/custom_error_widget.dart';
 
 // Global ValueNotifier for theme changes
@@ -19,6 +23,9 @@ final ValueNotifier<Locale> localeNotifier = ValueNotifier(
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize timezone BEFORE notification service
+  tz.initializeTimeZones();
 
   // Initialize notification service
   final notificationService = NotificationService();

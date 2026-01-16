@@ -80,7 +80,7 @@ class ExpenseDataService {
     );
 
     return expenses.fold<double>(0, (sum, expense) {
-      final amount = (expense['amount'] as num).toDouble();
+      final amount = ((expense['amount'] as num?) ?? 0).toDouble();
       // Only count negative amounts (expenses)
       return amount < 0 ? sum + amount.abs() : sum;
     });

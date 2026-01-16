@@ -347,7 +347,7 @@ class _AnalyticsAdminDashboardState extends State<AnalyticsAdminDashboard> {
                           onTap: () {
                             Navigator.pushNamed(
                               context,
-                              AppRoutes.userBehaviorAnalytics,
+                              AppRoutes.analyticsDashboard,
                             );
                           },
                           child: Container(

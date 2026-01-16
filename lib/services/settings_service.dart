@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../presentation/settings/settings.dart';
 
 /// Service for managing app settings and preferences
 class SettingsService {
@@ -22,18 +23,28 @@ class SettingsService {
   static const String _cloudBackupKey = 'cloud_backup_enabled';
   static const String _lastSyncTimeKey = 'last_sync_time';
   static const String _loginHistoryKey = 'login_history';
+  static const String _dailyReminderEnabledKey = 'daily_reminder_enabled';
+  static const String _dailyReminderTimeKey = 'daily_reminder_time';
 
   final LocalAuthentication _localAuth = LocalAuthentication();
 
   // Security Settings
   Future<bool> isBiometricEnabled() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(_biometricKey) ?? false;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getBool(_biometricKey) ?? false;
+    } catch (e) {
+      return false;
+    }
   }
 
   Future<void> setBiometricEnabled(bool enabled) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_biometricKey, enabled);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_biometricKey, enabled);
+    } catch (e) {
+      // Silent fail - storage quota exceeded or permissions denied
+    }
   }
 
   Future<bool> canUseBiometric() async {
@@ -210,6 +221,40 @@ class SettingsService {
   Future<void> setQuietHoursEnd(String time) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_quietHoursEndKey, time);
+  }
+
+  // Daily Reminder Settings
+  Future<bool> isDailyReminderEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_dailyReminderEnabledKey) ?? false;
+  }
+
+  Future<void> setDailyReminderEnabled(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_dailyReminderEnabledKey, enabled);
+  }
+
+  Future<String> getDailyReminderTime() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_dailyReminderTimeKey) ?? '19:00';
+  }
+
+  Future<void> setDailyReminderTime(String time) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_dailyReminderTimeKey, time);
+  }
+
+  // Daily Reminder Types
+  static const String _reminderTypesKey = 'reminder_types';
+
+  Future<List<String>> getReminderTypes() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getStringList(_reminderTypesKey) ?? ['expense_logging'];
+  }
+
+  Future<void> setReminderTypes(List<String> types) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_reminderTypesKey, types);
   }
 
   // Data Management

@@ -5,19 +5,21 @@ import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart
 class OcrService {
   final TextRecognizer _textRecognizer = TextRecognizer();
 
-  /// Extract expense data from receipt image
+  /// Dispose resources
+  void dispose() {
+    _textRecognizer.close();
+  }
+
+  /// Process image with proper resource cleanup
   Future<Map<String, dynamic>> extractReceiptData(String imagePath) async {
+    InputImage? inputImage;
     try {
-      final inputImage = InputImage.fromFilePath(imagePath);
+      inputImage = InputImage.fromFilePath(imagePath);
       final recognizedText = await _textRecognizer.processImage(inputImage);
-
-      // Extract data from recognized text
-      final extractedData = _parseReceiptText(recognizedText.text);
-
-      return extractedData;
+      return _parseReceiptText(recognizedText.text);
     } catch (e) {
       if (kDebugMode) {
-        print('OCR Error: $e');
+        print('OCR processing error: $e');
       }
       return {'amount': null, 'merchant': null, 'date': null, 'rawText': ''};
     }
@@ -125,10 +127,5 @@ class OcrService {
       }
     }
     return null;
-  }
-
-  /// Dispose resources
-  void dispose() {
-    _textRecognizer.close();
   }
 }

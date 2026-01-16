@@ -88,9 +88,21 @@ class _AddExpenseState extends State<AddExpense> {
 
         final date = args['date'];
         if (date is DateTime) {
-          _selectedDate = date;
+          // Validate date is not in the future
+          if (date.isAfter(DateTime.now())) {
+            _selectedDate = DateTime.now();
+          } else {
+            _selectedDate = date;
+          }
         } else if (date is String) {
-          _selectedDate = DateTime.parse(date);
+          try {
+            final parsedDate = DateTime.parse(date);
+            _selectedDate = parsedDate.isAfter(DateTime.now())
+                ? DateTime.now()
+                : parsedDate;
+          } catch (e) {
+            _selectedDate = DateTime.now();
+          }
         } else {
           _selectedDate = DateTime.now();
         }
@@ -137,7 +149,7 @@ class _AddExpenseState extends State<AddExpense> {
       isValid = false;
     } else {
       final amount = double.tryParse(_amountController.text);
-      if (amount == null || amount <= 0) {
+      if (amount == null || amount <= 0 || amount.isNaN || amount.isInfinite) {
         setState(() {
           _amountError = 'Please enter a valid amount greater than 0';
         });

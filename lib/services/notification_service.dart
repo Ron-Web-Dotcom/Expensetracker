@@ -1,7 +1,12 @@
+import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
+
+import './settings_service.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -12,44 +17,68 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
 
   bool _isInitialized = false;
+  bool _isInitializing = false;
 
   // Notification IDs
   static const int budgetAlert75Id = 1;
   static const int budgetAlert90Id = 2;
   static const int weeklySummaryId = 3;
   static const int achievementId = 4;
+  static const int dailyReminderId = 5;
 
   // SharedPreferences keys
   static const String _lastBudgetAlertKey = 'last_budget_alert_percentage';
   static const String _lastWeeklySummaryKey = 'last_weekly_summary_date';
   static const String _achievementCountKey = 'achievement_count';
+  static const String _reminderTypesKey = 'reminder_types';
+  static const String _reminderHistoryKey = 'reminder_history';
+  static const String _reminderStreakKey = 'reminder_streak';
+  static const String _lastReminderResponseKey = 'last_reminder_response';
 
   Future<void> initialize() async {
     if (_isInitialized) return;
 
-    // Initialize timezone
-    tz.initializeTimeZones();
+    // Prevent race condition with concurrent initialization calls
+    if (_isInitializing) {
+      while (_isInitializing) {
+        await Future.delayed(const Duration(milliseconds: 50));
+      }
+      return;
+    }
 
-    const androidSettings = AndroidInitializationSettings(
-      '@mipmap/ic_launcher',
-    );
-    const iosSettings = DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
-    );
+    _isInitializing = true;
 
-    const initSettings = InitializationSettings(
-      android: androidSettings,
-      iOS: iosSettings,
-    );
+    try {
+      // Initialize timezone
+      tz.initializeTimeZones();
 
-    await _notifications.initialize(
-      initSettings,
-      onDidReceiveNotificationResponse: _onNotificationTapped,
-    );
+      const androidSettings = AndroidInitializationSettings(
+        '@mipmap/ic_launcher',
+      );
+      const iosSettings = DarwinInitializationSettings(
+        requestAlertPermission: true,
+        requestBadgePermission: true,
+        requestSoundPermission: true,
+      );
 
-    _isInitialized = true;
+      const initSettings = InitializationSettings(
+        android: androidSettings,
+        iOS: iosSettings,
+      );
+
+      await _notifications.initialize(
+        initSettings,
+        onDidReceiveNotificationResponse: _onNotificationTapped,
+      );
+
+      _isInitialized = true;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Notification service initialization error: $e');
+      }
+    } finally {
+      _isInitializing = false;
+    }
   }
 
   void _onNotificationTapped(NotificationResponse response) {
@@ -360,6 +389,177 @@ class NotificationService {
   // Cancel specific notification
   Future<void> cancelNotification(int id) async {
     await _notifications.cancel(id);
+  }
+
+  // Daily Reminder Methods
+  Future<void> scheduleDailyReminder({
+    required String time,
+    List<String>? reminderTypes,
+  }) async {
+    if (!_isInitialized) await initialize();
+
+    await _notifications.cancel(dailyReminderId);
+
+    final prefs = await SharedPreferences.getInstance();
+    final types = reminderTypes ?? ['expense_logging'];
+    await prefs.setStringList(_reminderTypesKey, types);
+
+    // Check if time falls within quiet hours
+    final quietStart = await _getQuietHoursStart();
+    final quietEnd = await _getQuietHoursEnd();
+    if (_isInQuietHours(time, quietStart, quietEnd)) {
+      return;
+    }
+
+    final timeParts = time.split(':');
+    final hour = int.parse(timeParts[0]);
+    final minute = int.parse(timeParts[1]);
+
+    final now = DateTime.now();
+    var scheduledDate = DateTime(now.year, now.month, now.day, hour, minute);
+
+    if (scheduledDate.isBefore(now)) {
+      scheduledDate = scheduledDate.add(const Duration(days: 1));
+    }
+
+    final tzScheduledDate = tz.TZDateTime.from(scheduledDate, tz.local);
+
+    final reminderMessage = _getReminderMessage(types);
+
+    const androidDetails = AndroidNotificationDetails(
+      'daily_reminders',
+      'Daily Reminders',
+      channelDescription: 'Daily expense logging reminders',
+      importance: Importance.high,
+      priority: Priority.high,
+      icon: '@mipmap/ic_launcher',
+      styleInformation: BigTextStyleInformation(''),
+    );
+
+    const iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+
+    const details = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    await _notifications.zonedSchedule(
+      dailyReminderId,
+      '💰 Daily Expense Reminder',
+      reminderMessage,
+      tzScheduledDate,
+      details,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      matchDateTimeComponents: DateTimeComponents.time,
+    );
+  }
+
+  Future<void> cancelDailyReminder() async {
+    if (!_isInitialized) await initialize();
+    await _notifications.cancel(dailyReminderId);
+  }
+
+  Future<String?> getDailyReminderTime() async {
+    final prefs = await SharedPreferences.getInstance();
+    final settingsService = SettingsService();
+    return await settingsService.getDailyReminderTime();
+  }
+
+  Future<List<String>> getDailyReminderTypes() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getStringList(_reminderTypesKey) ?? ['expense_logging'];
+  }
+
+  Future<void> logReminderResponse(bool responded) async {
+    final prefs = await SharedPreferences.getInstance();
+    final historyJson = prefs.getString(_reminderHistoryKey);
+
+    List<Map<String, dynamic>> history = [];
+    if (historyJson != null) {
+      history = List<Map<String, dynamic>>.from(jsonDecode(historyJson));
+    }
+
+    history.insert(0, {
+      'date': DateTime.now().toIso8601String(),
+      'responded': responded,
+    });
+
+    if (history.length > 100) {
+      history = history.sublist(0, 100);
+    }
+
+    await prefs.setString(_reminderHistoryKey, jsonEncode(history));
+
+    // Update streak
+    if (responded) {
+      final streak = await getReminderStreak();
+      await prefs.setInt(_reminderStreakKey, streak + 1);
+    } else {
+      await prefs.setInt(_reminderStreakKey, 0);
+    }
+
+    await prefs.setString(
+      _lastReminderResponseKey,
+      DateTime.now().toIso8601String(),
+    );
+  }
+
+  Future<int> getReminderStreak() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_reminderStreakKey) ?? 0;
+  }
+
+  Future<List<Map<String, dynamic>>> getReminderHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    final historyJson = prefs.getString(_reminderHistoryKey);
+
+    if (historyJson == null) return [];
+    return List<Map<String, dynamic>>.from(jsonDecode(historyJson));
+  }
+
+  String _getReminderMessage(List<String> types) {
+    if (types.contains('expense_logging')) {
+      return "Don't forget to log today's expenses! Keep your budget on track.";
+    } else if (types.contains('budget_review')) {
+      return 'Time to review your budget! Check your spending progress.';
+    } else if (types.contains('receipt_capture')) {
+      return 'Have receipts to capture? Snap photos before they fade!';
+    }
+    return "Don't forget to log today's expenses!";
+  }
+
+  Future<String> _getQuietHoursStart() async {
+    final settingsService = SettingsService();
+    return await settingsService.getQuietHoursStart();
+  }
+
+  Future<String> _getQuietHoursEnd() async {
+    final settingsService = SettingsService();
+    return await settingsService.getQuietHoursEnd();
+  }
+
+  bool _isInQuietHours(String time, String quietStart, String quietEnd) {
+    final timeParts = time.split(':');
+    final timeMinutes = int.parse(timeParts[0]) * 60 + int.parse(timeParts[1]);
+
+    final startParts = quietStart.split(':');
+    final startMinutes =
+        int.parse(startParts[0]) * 60 + int.parse(startParts[1]);
+
+    final endParts = quietEnd.split(':');
+    final endMinutes = int.parse(endParts[0]) * 60 + int.parse(endParts[1]);
+
+    if (startMinutes <= endMinutes) {
+      return timeMinutes >= startMinutes && timeMinutes <= endMinutes;
+    } else {
+      return timeMinutes >= startMinutes || timeMinutes <= endMinutes;
+    }
   }
 
   // Send generic notification

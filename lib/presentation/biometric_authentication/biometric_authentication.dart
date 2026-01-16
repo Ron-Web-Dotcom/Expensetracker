@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:sizer/sizer.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/app_export.dart';
 import '../../widgets/custom_icon_widget.dart';
@@ -194,7 +195,7 @@ class _BiometricAuthenticationState extends State<BiometricAuthentication>
     );
   }
 
-  void _showLockoutMessage() {
+  void _showLockoutMessage() async {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -226,6 +227,13 @@ class _BiometricAuthenticationState extends State<BiometricAuthentication>
         });
       }
     });
+
+    // Store lockout timestamp in SharedPreferences for persistence
+    final prefs = await SharedPreferences.getInstance();
+    final lockoutEndTime = DateTime.now()
+        .add(const Duration(seconds: 30))
+        .millisecondsSinceEpoch;
+    await prefs.setInt('biometric_lockout_end', lockoutEndTime);
   }
 
   void _usePasscodeInstead() {

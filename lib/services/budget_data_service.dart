@@ -9,17 +9,26 @@ class BudgetDataService {
 
   /// Save or update total budget
   Future<void> saveTotalBudget(double amount) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setDouble(_totalBudgetKey, amount);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setDouble(_totalBudgetKey, amount);
 
-    // Notify all listeners that budget data has changed
-    _notifier.notifyBudgetChanged();
+      // Notify all listeners that budget data has changed
+      _notifier.notifyBudgetChanged();
+    } catch (e) {
+      // Silent fail - storage quota exceeded or permissions denied
+      rethrow;
+    }
   }
 
   /// Get total budget
   Future<double> getTotalBudget() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getDouble(_totalBudgetKey) ?? 0.0;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getDouble(_totalBudgetKey) ?? 0.0;
+    } catch (e) {
+      return 0.0;
+    }
   }
 
   /// Save or update a category budget
@@ -64,12 +73,17 @@ class BudgetDataService {
 
   /// Get all category budgets
   Future<List<Map<String, dynamic>>> getAllCategoryBudgets() async {
-    final prefs = await SharedPreferences.getInstance();
-    final budgetsJson = prefs.getString(_budgetsKey);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final budgetsJson = prefs.getString(_budgetsKey);
 
-    if (budgetsJson == null) return [];
+      if (budgetsJson == null) return [];
 
-    return List<Map<String, dynamic>>.from(jsonDecode(budgetsJson));
+      return List<Map<String, dynamic>>.from(jsonDecode(budgetsJson));
+    } catch (e) {
+      // Return empty list if JSON decode fails or storage error
+      return [];
+    }
   }
 
   /// Delete a category budget

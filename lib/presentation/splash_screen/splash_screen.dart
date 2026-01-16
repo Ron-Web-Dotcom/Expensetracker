@@ -197,7 +197,7 @@ class _SplashScreenState extends State<SplashScreen>
             children: [
               const Spacer(flex: 2),
               _buildLogo(theme),
-              const SizedBox(height: 48),
+              const SizedBox(height: 128),
               _buildLoadingIndicator(theme),
               const SizedBox(height: 24),
               _buildStatusText(theme),
