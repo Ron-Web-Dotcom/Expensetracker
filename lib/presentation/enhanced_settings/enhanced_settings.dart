@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 
-import '../../core/app_export.dart';
 import '../../services/notification_service.dart';
 import '../../services/settings_service.dart';
 import '../../widgets/custom_app_bar.dart';
@@ -9,10 +8,6 @@ import './widgets/reminder_schedule_overview_widget.dart';
 import './widgets/reminder_streak_widget.dart';
 import './widgets/reminder_time_selector_widget.dart';
 import './widgets/reminder_type_selector_widget.dart';
-import 'widgets/reminder_schedule_overview_widget.dart';
-import 'widgets/reminder_streak_widget.dart';
-import 'widgets/reminder_time_selector_widget.dart';
-import 'widgets/reminder_type_selector_widget.dart';
 
 class EnhancedSettings extends StatefulWidget {
   const EnhancedSettings({super.key});
@@ -97,7 +92,9 @@ class _EnhancedSettingsState extends State<EnhancedSettings> {
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
+      backgroundColor: isDark
+          ? const Color(0xFF121212)
+          : const Color(0xFFF5F5F5),
       appBar: CustomAppBarFactory.withBack(
         title: 'Daily Reminders',
         onBackPressed: () => Navigator.pop(context),
@@ -150,7 +147,9 @@ class _EnhancedSettingsState extends State<EnhancedSettings> {
                                 'Daily Reminders',
                                 style: theme.textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.w600,
-                                  color: isDark ? Colors.white : const Color(0xFF212121),
+                                  color: isDark
+                                      ? Colors.white
+                                      : const Color(0xFF212121),
                                 ),
                               ),
                               SizedBox(height: 0.5.h),
@@ -161,7 +160,9 @@ class _EnhancedSettingsState extends State<EnhancedSettings> {
                                 style: theme.textTheme.bodySmall?.copyWith(
                                   color: _dailyReminderEnabled
                                       ? theme.colorScheme.primary
-                                      : (isDark ? const Color(0xFFB0B0B0) : const Color(0xFF757575)),
+                                      : (isDark
+                                            ? const Color(0xFFB0B0B0)
+                                            : const Color(0xFF757575)),
                                 ),
                               ),
                             ],
@@ -170,7 +171,7 @@ class _EnhancedSettingsState extends State<EnhancedSettings> {
                         Switch(
                           value: _dailyReminderEnabled,
                           onChanged: _toggleReminder,
-                          activeColor: theme.colorScheme.primary,
+                          activeThumbColor: theme.colorScheme.primary,
                         ),
                       ],
                     ),
@@ -243,7 +244,9 @@ class _EnhancedSettingsState extends State<EnhancedSettings> {
                                 Text(
                                   'Set reminders for evening hours (7-8 PM) when you\'re most likely to reflect on daily spending.',
                                   style: theme.textTheme.bodySmall?.copyWith(
-                                    color: isDark ? const Color(0xFFB0B0B0) : const Color(0xFF757575),
+                                    color: isDark
+                                        ? const Color(0xFFB0B0B0)
+                                        : const Color(0xFF757575),
                                   ),
                                 ),
                               ],

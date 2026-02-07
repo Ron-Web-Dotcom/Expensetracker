@@ -75,7 +75,8 @@ class _InteractiveTutorialState extends State<InteractiveTutorial>
       "icon": "waving_hand",
       "highlightArea": "none",
       "action": "Tap Next to begin",
-      "image": "https://img.rocket.new/generatedImages/rocket_gen_img_1a4214581-1767498401520.png",
+      "image":
+          "https://img.rocket.new/generatedImages/rocket_gen_img_1a4214581-1767498401520.png",
       "semanticLabel":
           "Welcome screen with colorful expense tracking interface",
     },
@@ -86,7 +87,8 @@ class _InteractiveTutorialState extends State<InteractiveTutorial>
       "icon": "dashboard",
       "highlightArea": "dashboard",
       "action": "Explore the dashboard",
-      "image": "https://img.rocket.new/generatedImages/rocket_gen_img_1fa463b57-1766849749855.png",
+      "image":
+          "https://img.rocket.new/generatedImages/rocket_gen_img_1fa463b57-1766849749855.png",
       "semanticLabel":
           "Dashboard showing spending summary and transaction list",
     },
@@ -97,7 +99,8 @@ class _InteractiveTutorialState extends State<InteractiveTutorial>
       "icon": "add_circle",
       "highlightArea": "add_button",
       "action": "Try adding an expense",
-      "image": "https://img.rocket.new/generatedImages/rocket_gen_img_1ce6bb00a-1766785973851.png",
+      "image":
+          "https://img.rocket.new/generatedImages/rocket_gen_img_1ce6bb00a-1766785973851.png",
       "semanticLabel":
           "Add expense screen with amount input and category selector",
     },
@@ -108,7 +111,8 @@ class _InteractiveTutorialState extends State<InteractiveTutorial>
       "icon": "category",
       "highlightArea": "category_selector",
       "action": "Select a category",
-      "image": "https://img.rocket.new/generatedImages/rocket_gen_img_1f1f11e6b-1766610131969.png",
+      "image":
+          "https://img.rocket.new/generatedImages/rocket_gen_img_1f1f11e6b-1766610131969.png",
       "semanticLabel": "Category selection grid with colorful icons",
     },
     {
@@ -118,7 +122,8 @@ class _InteractiveTutorialState extends State<InteractiveTutorial>
       "icon": "camera_alt",
       "highlightArea": "camera_button",
       "action": "Take a photo",
-      "image": "https://img.rocket.new/generatedImages/rocket_gen_img_10b6e7da4-1767498403655.png",
+      "image":
+          "https://img.rocket.new/generatedImages/rocket_gen_img_1242923e8-1769035904229.png",
       "semanticLabel": "Camera interface capturing receipt with OCR overlay",
     },
     {
@@ -139,7 +144,8 @@ class _InteractiveTutorialState extends State<InteractiveTutorial>
       "icon": "pie_chart",
       "highlightArea": "budget_progress",
       "action": "View progress",
-      "image": "https://img.rocket.new/generatedImages/rocket_gen_img_1546aed22-1766888236448.png",
+      "image":
+          "https://img.rocket.new/generatedImages/rocket_gen_img_1546aed22-1766888236448.png",
       "semanticLabel": "Budget progress chart with percentage indicators",
     },
     {
@@ -149,7 +155,8 @@ class _InteractiveTutorialState extends State<InteractiveTutorial>
       "icon": "trending_up",
       "highlightArea": "analytics_tab",
       "action": "Explore analytics",
-      "image": "https://img.rocket.new/generatedImages/rocket_gen_img_175de21dc-1766489433173.png",
+      "image":
+          "https://img.rocket.new/generatedImages/rocket_gen_img_1f142a6b7-1767729425078.png",
       "semanticLabel": "Analytics dashboard with line graphs and bar charts",
     },
     {
@@ -159,7 +166,8 @@ class _InteractiveTutorialState extends State<InteractiveTutorial>
       "icon": "history",
       "highlightArea": "history_tab",
       "action": "Browse history",
-      "image": "https://img.rocket.new/generatedImages/rocket_gen_img_1fa463b57-1766849749855.png",
+      "image":
+          "https://img.rocket.new/generatedImages/rocket_gen_img_1fa463b57-1766849749855.png",
       "semanticLabel": "Transaction list with filter options and search bar",
     },
     {
@@ -169,7 +177,8 @@ class _InteractiveTutorialState extends State<InteractiveTutorial>
       "icon": "file_download",
       "highlightArea": "export_button",
       "action": "Export data",
-      "image": "https://img.rocket.new/generatedImages/rocket_gen_img_136305331-1764755204939.png",
+      "image":
+          "https://img.rocket.new/generatedImages/rocket_gen_img_1e004d64d-1768726510236.png",
       "semanticLabel": "Export options screen with file format selection",
     },
     {
@@ -179,7 +188,8 @@ class _InteractiveTutorialState extends State<InteractiveTutorial>
       "icon": "settings",
       "highlightArea": "settings",
       "action": "Adjust settings",
-      "image": "https://img.rocket.new/generatedImages/rocket_gen_img_10e221d39-1767014223377.png",
+      "image":
+          "https://img.rocket.new/generatedImages/rocket_gen_img_10e221d39-1767014223377.png",
       "semanticLabel": "Settings screen with customization options",
     },
     {
@@ -189,7 +199,8 @@ class _InteractiveTutorialState extends State<InteractiveTutorial>
       "icon": "check_circle",
       "highlightArea": "none",
       "action": "Start using the app",
-      "image": "https://img.rocket.new/generatedImages/rocket_gen_img_1dad4a06c-1764695007811.png",
+      "image":
+          "https://img.rocket.new/generatedImages/rocket_gen_img_1a910fd12-1768471616604.png",
       "semanticLabel": "Success screen with checkmark and celebration confetti",
     },
   ];

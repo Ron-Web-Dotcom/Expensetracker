@@ -1,10 +1,12 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import './expense_notifier.dart';
+import './secure_storage_service.dart';
 
 class ExpenseDataService {
   static const String _expensesKey = 'expenses_data';
   final ExpenseNotifier _notifier = ExpenseNotifier();
+  final SecureStorageService _secureStorage = SecureStorageService();
 
   /// Save a new expense
   Future<void> saveExpense({
@@ -18,11 +20,13 @@ class ExpenseDataService {
     String transactionType = 'expense',
   }) async {
     final prefs = await SharedPreferences.getInstance();
-    final expensesJson = prefs.getString(_expensesKey);
+
+    // Read encrypted data
+    final encryptedJson = await _secureStorage.readEncrypted(_expensesKey);
 
     List<Map<String, dynamic>> expenses = [];
-    if (expensesJson != null) {
-      expenses = List<Map<String, dynamic>>.from(jsonDecode(expensesJson));
+    if (encryptedJson != null) {
+      expenses = List<Map<String, dynamic>>.from(jsonDecode(encryptedJson));
     }
 
     final expense = {
@@ -39,7 +43,9 @@ class ExpenseDataService {
     };
 
     expenses.add(expense);
-    await prefs.setString(_expensesKey, jsonEncode(expenses));
+
+    // Save encrypted data
+    await _secureStorage.saveEncrypted(_expensesKey, jsonEncode(expenses));
 
     // Notify all listeners that expense data has changed
     _notifier.notifyExpenseChanged();
@@ -47,12 +53,12 @@ class ExpenseDataService {
 
   /// Get all expenses
   Future<List<Map<String, dynamic>>> getAllExpenses() async {
-    final prefs = await SharedPreferences.getInstance();
-    final expensesJson = prefs.getString(_expensesKey);
+    // Read encrypted data
+    final encryptedJson = await _secureStorage.readEncrypted(_expensesKey);
 
-    if (expensesJson == null) return [];
+    if (encryptedJson == null) return [];
 
-    return List<Map<String, dynamic>>.from(jsonDecode(expensesJson));
+    return List<Map<String, dynamic>>.from(jsonDecode(encryptedJson));
   }
 
   /// Get expenses filtered by date range
@@ -80,7 +86,7 @@ class ExpenseDataService {
     );
 
     return expenses.fold<double>(0, (sum, expense) {
-      final amount = ((expense['amount'] as num?) ?? 0).toDouble();
+      final amount = (expense['amount'] as num?)?.toDouble() ?? 0.0;
       // Only count negative amounts (expenses)
       return amount < 0 ? sum + amount.abs() : sum;
     });
@@ -132,20 +138,20 @@ class ExpenseDataService {
 
   /// Clear all expenses (for testing or reset)
   Future<void> clearAllExpenses() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_expensesKey);
+    await _secureStorage.removeEncrypted(_expensesKey);
     _notifier.notifyExpenseChanged();
   }
 
   /// Delete a specific expense by ID
   Future<void> deleteExpense(String id) async {
-    final prefs = await SharedPreferences.getInstance();
-    final expensesJson = prefs.getString(_expensesKey) ?? '[]';
-    final List<dynamic> expenses = json.decode(expensesJson);
+    final encryptedJson = await _secureStorage.readEncrypted(_expensesKey);
+    if (encryptedJson == null) return;
+
+    final List<dynamic> expenses = json.decode(encryptedJson);
 
     expenses.removeWhere((expense) => expense['id'] == id);
 
-    await prefs.setString(_expensesKey, json.encode(expenses));
+    await _secureStorage.saveEncrypted(_expensesKey, json.encode(expenses));
     _notifier.notifyExpenseChanged();
   }
 
@@ -160,9 +166,10 @@ class ExpenseDataService {
     required bool hasLocation,
     String transactionType = 'expense',
   }) async {
-    final prefs = await SharedPreferences.getInstance();
-    final expensesJson = prefs.getString(_expensesKey) ?? '[]';
-    final List<dynamic> expenses = json.decode(expensesJson);
+    final encryptedJson = await _secureStorage.readEncrypted(_expensesKey);
+    if (encryptedJson == null) return;
+
+    final List<dynamic> expenses = json.decode(encryptedJson);
 
     final index = expenses.indexWhere((expense) => expense['id'] == id);
     if (index != -1) {
@@ -179,7 +186,7 @@ class ExpenseDataService {
         'transactionType': transactionType,
       };
 
-      await prefs.setString(_expensesKey, json.encode(expenses));
+      await _secureStorage.saveEncrypted(_expensesKey, json.encode(expenses));
       _notifier.notifyExpenseChanged();
     }
   }

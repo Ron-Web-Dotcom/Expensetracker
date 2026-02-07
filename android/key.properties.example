@@ -1,0 +1,30 @@
+# Android Release Signing Configuration
+# 
+# IMPORTANT: This file contains sensitive information and should NEVER be committed to version control.
+# Add this file to .gitignore immediately.
+#
+# Instructions to generate release keystore:
+# 
+# 1. Generate keystore using keytool:
+#    keytool -genkey -v -keystore ~/expensetracker-release.jks \
+#      -keyalg RSA -keysize 2048 -validity 10000 \
+#      -alias expensetracker
+#
+# 2. You will be prompted to enter:
+#    - Keystore password (store this securely)
+#    - Key password (store this securely)
+#    - Your name, organization, city, state, country
+#
+# 3. Update the values below with your keystore information:
+
+storePassword=YOUR_KEYSTORE_PASSWORD_HERE
+keyPassword=YOUR_KEY_PASSWORD_HERE
+keyAlias=expensetracker
+storeFile=/path/to/your/expensetracker-release.jks
+
+# Security Notes:
+# - Store keystore file in a secure location (NOT in project directory)
+# - Backup keystore file securely (losing it means you cannot update your app)
+# - Never share keystore passwords
+# - Add key.properties to .gitignore
+# - For CI/CD, use encrypted environment variables

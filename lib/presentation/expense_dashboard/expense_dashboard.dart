@@ -187,9 +187,8 @@ class _ExpenseDashboardState extends State<ExpenseDashboard> {
 
   @override
   void dispose() {
-    _analytics.trackSessionEnd();
-    _scrollController.dispose();
     _expenseNotifier.removeListener(_onDataChanged);
+    _scrollController.dispose();
     super.dispose();
   }
 

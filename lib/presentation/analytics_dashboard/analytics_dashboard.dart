@@ -29,6 +29,12 @@ class _AnalyticsDashboardState extends State<AnalyticsDashboard> {
   String _selectedPeriod = 'This Month';
   Map<String, dynamic> _analyticsSummary = {};
 
+  // Filter state
+  DateTime? _startDate;
+  DateTime? _endDate;
+  String _selectedCategory = 'All';
+  String _selectedPaymentMethod = 'All';
+
   @override
   void initState() {
     super.initState();
@@ -48,9 +54,11 @@ class _AnalyticsDashboardState extends State<AnalyticsDashboard> {
 
   Future<void> _loadAnalyticsSummary() async {
     final summary = await _analytics.getAnalyticsSummary();
-    setState(() {
-      _analyticsSummary = summary;
-    });
+    if (mounted) {
+      setState(() {
+        _analyticsSummary = summary;
+      });
+    }
   }
 
   int _currentBottomNavIndex = 3;
@@ -63,6 +71,35 @@ class _AnalyticsDashboardState extends State<AnalyticsDashboard> {
     _chartPageController.dispose();
     _expenseNotifier.removeListener(_onDataChanged);
     super.dispose();
+  }
+
+  Future<void> _selectDate(BuildContext context, bool isStartDate) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: isStartDate
+          ? (_startDate ?? DateTime.now())
+          : (_endDate ?? DateTime.now()),
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null) {
+      setState(() {
+        if (isStartDate) {
+          _startDate = picked;
+        } else {
+          _endDate = picked;
+        }
+      });
+    }
+  }
+
+  void _resetFilters() {
+    setState(() {
+      _startDate = null;
+      _endDate = null;
+      _selectedCategory = 'All';
+      _selectedPaymentMethod = 'All';
+    });
   }
 
   void _showFilterBottomSheet() {
@@ -133,12 +170,21 @@ class _AnalyticsDashboardState extends State<AnalyticsDashboard> {
                             duration: Duration(seconds: 1),
                           ),
                         );
-                        final filePath = await _exportService.exportAsPDF();
+                        final filePath = await _exportService.exportAsPDF(
+                          startDate: _startDate,
+                          endDate: _endDate,
+                          category: _selectedCategory != 'All'
+                              ? _selectedCategory
+                              : null,
+                          paymentMethod: _selectedPaymentMethod != 'All'
+                              ? _selectedPaymentMethod
+                              : null,
+                        );
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(
-                                'PDF exported successfully to: $filePath',
+                                'PDF exported successfully: $filePath',
                               ),
                               behavior: SnackBarBehavior.floating,
                               duration: const Duration(seconds: 3),
@@ -182,12 +228,21 @@ class _AnalyticsDashboardState extends State<AnalyticsDashboard> {
                             duration: Duration(seconds: 1),
                           ),
                         );
-                        final filePath = await _exportService.exportAsCSV();
+                        final filePath = await _exportService.exportAsCSV(
+                          startDate: _startDate,
+                          endDate: _endDate,
+                          category: _selectedCategory != 'All'
+                              ? _selectedCategory
+                              : null,
+                          paymentMethod: _selectedPaymentMethod != 'All'
+                              ? _selectedPaymentMethod
+                              : null,
+                        );
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(
-                                'CSV exported successfully to: $filePath',
+                                'CSV exported successfully: $filePath',
                               ),
                               behavior: SnackBarBehavior.floating,
                               duration: const Duration(seconds: 3),
@@ -267,8 +322,12 @@ class _AnalyticsDashboardState extends State<AnalyticsDashboard> {
                           color: theme.colorScheme.primary,
                           size: 18,
                         ),
-                        label: Text('Start Date'),
-                        onPressed: () {},
+                        label: Text(
+                          _startDate != null
+                              ? '${_startDate!.month}/${_startDate!.day}/${_startDate!.year}'
+                              : 'Start Date',
+                        ),
+                        onPressed: () => _selectDate(context, true),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -279,8 +338,12 @@ class _AnalyticsDashboardState extends State<AnalyticsDashboard> {
                           color: theme.colorScheme.primary,
                           size: 18,
                         ),
-                        label: Text('End Date'),
-                        onPressed: () {},
+                        label: Text(
+                          _endDate != null
+                              ? '${_endDate!.month}/${_endDate!.day}/${_endDate!.year}'
+                              : 'End Date',
+                        ),
+                        onPressed: () => _selectDate(context, false),
                       ),
                     ),
                   ],
@@ -299,17 +362,24 @@ class _AnalyticsDashboardState extends State<AnalyticsDashboard> {
                   children:
                       [
                             'All',
-                            'Food',
-                            'Transport',
+                            'Food & Dining',
+                            'Transportation',
                             'Shopping',
-                            'Bills',
+                            'Bills & Utilities',
                             'Entertainment',
+                            'Healthcare',
+                            'Education',
+                            'Other',
                           ]
                           .map(
                             (category) => FilterChip(
                               label: Text(category),
-                              selected: category == 'All',
-                              onSelected: (selected) {},
+                              selected: category == _selectedCategory,
+                              onSelected: (selected) {
+                                setState(() {
+                                  _selectedCategory = category;
+                                });
+                              },
                             ),
                           )
                           .toList(),
@@ -331,13 +401,18 @@ class _AnalyticsDashboardState extends State<AnalyticsDashboard> {
                             'Cash',
                             'Credit Card',
                             'Debit Card',
+                            'Bank Transfer',
                             'Digital Wallet',
                           ]
                           .map(
                             (method) => FilterChip(
                               label: Text(method),
-                              selected: method == 'All',
-                              onSelected: (selected) {},
+                              selected: method == _selectedPaymentMethod,
+                              onSelected: (selected) {
+                                setState(() {
+                                  _selectedPaymentMethod = method;
+                                });
+                              },
                             ),
                           )
                           .toList(),
@@ -347,15 +422,21 @@ class _AnalyticsDashboardState extends State<AnalyticsDashboard> {
                   children: [
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: Text('Reset'),
+                        onPressed: () {
+                          _resetFilters();
+                          Navigator.pop(context);
+                        },
+                        child: const Text('Reset'),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: Text('Apply Filters'),
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _loadAnalyticsSummary();
+                        },
+                        child: const Text('Apply Filters'),
                       ),
                     ),
                   ],

@@ -87,7 +87,9 @@ class _AddExpenseState extends State<AddExpense> {
         _descriptionController.text = args['description'] as String? ?? '';
 
         final date = args['date'];
-        if (date is DateTime) {
+        if (date == null) {
+          _selectedDate = DateTime.now();
+        } else if (date is DateTime) {
           // Validate date is not in the future
           if (date.isAfter(DateTime.now())) {
             _selectedDate = DateTime.now();

@@ -1,17 +1,18 @@
 import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
 import './expense_notifier.dart';
+import './secure_storage_service.dart';
 
 class BudgetDataService {
   static const String _budgetsKey = 'budgets_data';
   static const String _totalBudgetKey = 'total_budget';
   final ExpenseNotifier _notifier = ExpenseNotifier();
+  final SecureStorageService _secureStorage = SecureStorageService();
 
   /// Save or update total budget
   Future<void> saveTotalBudget(double amount) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setDouble(_totalBudgetKey, amount);
+      // Save encrypted budget amount
+      await _secureStorage.saveEncrypted(_totalBudgetKey, amount.toString());
 
       // Notify all listeners that budget data has changed
       _notifier.notifyBudgetChanged();
@@ -24,8 +25,11 @@ class BudgetDataService {
   /// Get total budget
   Future<double> getTotalBudget() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      return prefs.getDouble(_totalBudgetKey) ?? 0.0;
+      final encryptedAmount = await _secureStorage.readEncrypted(
+        _totalBudgetKey,
+      );
+      if (encryptedAmount == null) return 0.0;
+      return double.tryParse(encryptedAmount) ?? 0.0;
     } catch (e) {
       return 0.0;
     }
@@ -38,12 +42,12 @@ class BudgetDataService {
     required String colorHex,
     required double budgetLimit,
   }) async {
-    final prefs = await SharedPreferences.getInstance();
-    final budgetsJson = prefs.getString(_budgetsKey);
+    // Read encrypted budgets
+    final encryptedJson = await _secureStorage.readEncrypted(_budgetsKey);
 
     List<Map<String, dynamic>> budgets = [];
-    if (budgetsJson != null) {
-      budgets = List<Map<String, dynamic>>.from(jsonDecode(budgetsJson));
+    if (encryptedJson != null) {
+      budgets = List<Map<String, dynamic>>.from(jsonDecode(encryptedJson));
     }
 
     // Check if category already exists
@@ -65,7 +69,8 @@ class BudgetDataService {
       budgets.add(budget);
     }
 
-    await prefs.setString(_budgetsKey, jsonEncode(budgets));
+    // Save encrypted budgets
+    await _secureStorage.saveEncrypted(_budgetsKey, jsonEncode(budgets));
 
     // Notify all listeners that budget data has changed
     _notifier.notifyBudgetChanged();
@@ -74,12 +79,12 @@ class BudgetDataService {
   /// Get all category budgets
   Future<List<Map<String, dynamic>>> getAllCategoryBudgets() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final budgetsJson = prefs.getString(_budgetsKey);
+      // Read encrypted budgets
+      final encryptedJson = await _secureStorage.readEncrypted(_budgetsKey);
 
-      if (budgetsJson == null) return [];
+      if (encryptedJson == null) return [];
 
-      return List<Map<String, dynamic>>.from(jsonDecode(budgetsJson));
+      return List<Map<String, dynamic>>.from(jsonDecode(encryptedJson));
     } catch (e) {
       // Return empty list if JSON decode fails or storage error
       return [];
@@ -88,18 +93,19 @@ class BudgetDataService {
 
   /// Delete a category budget
   Future<void> deleteCategoryBudget(String categoryName) async {
-    final prefs = await SharedPreferences.getInstance();
-    final budgetsJson = prefs.getString(_budgetsKey);
+    // Read encrypted budgets
+    final encryptedJson = await _secureStorage.readEncrypted(_budgetsKey);
 
-    if (budgetsJson == null) return;
+    if (encryptedJson == null) return;
 
     List<Map<String, dynamic>> budgets = List<Map<String, dynamic>>.from(
-      jsonDecode(budgetsJson),
+      jsonDecode(encryptedJson),
     );
 
     budgets.removeWhere((b) => b['categoryName'] == categoryName);
 
-    await prefs.setString(_budgetsKey, jsonEncode(budgets));
+    // Save encrypted budgets
+    await _secureStorage.saveEncrypted(_budgetsKey, jsonEncode(budgets));
 
     // Notify all listeners that budget data has changed
     _notifier.notifyBudgetChanged();
@@ -111,12 +117,12 @@ class BudgetDataService {
     required DateTime startDate,
     required DateTime endDate,
   }) async {
-    final prefs = await SharedPreferences.getInstance();
-    final expensesJson = prefs.getString('expenses_data');
+    // Read encrypted expenses
+    final encryptedJson = await _secureStorage.readEncrypted('expenses_data');
 
-    if (expensesJson == null) return 0.0;
+    if (encryptedJson == null) return 0.0;
 
-    final expenses = List<Map<String, dynamic>>.from(jsonDecode(expensesJson));
+    final expenses = List<Map<String, dynamic>>.from(jsonDecode(encryptedJson));
 
     double total = 0.0;
     for (var expense in expenses) {
@@ -138,12 +144,12 @@ class BudgetDataService {
     required DateTime startDate,
     required DateTime endDate,
   }) async {
-    final prefs = await SharedPreferences.getInstance();
-    final expensesJson = prefs.getString('expenses_data');
+    // Read encrypted expenses
+    final encryptedJson = await _secureStorage.readEncrypted('expenses_data');
 
-    if (expensesJson == null) return 0.0;
+    if (encryptedJson == null) return 0.0;
 
-    final expenses = List<Map<String, dynamic>>.from(jsonDecode(expensesJson));
+    final expenses = List<Map<String, dynamic>>.from(jsonDecode(encryptedJson));
 
     double total = 0.0;
     for (var expense in expenses) {
@@ -160,8 +166,7 @@ class BudgetDataService {
 
   /// Clear all budgets (for testing or reset)
   Future<void> clearAllBudgets() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_budgetsKey);
-    await prefs.remove(_totalBudgetKey);
+    await _secureStorage.removeEncrypted(_budgetsKey);
+    await _secureStorage.removeEncrypted(_totalBudgetKey);
   }
 }

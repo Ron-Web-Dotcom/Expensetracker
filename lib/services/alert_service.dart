@@ -137,7 +137,9 @@ class AlertService {
         endDate: endOfMonth,
       );
 
-      final percentage = (spent / budgetLimit * 100).round();
+      final percentage = budgetLimit > 0
+          ? (spent / budgetLimit * 100).round()
+          : 0;
 
       // Check 50% threshold
       if (percentage >= 50 &&

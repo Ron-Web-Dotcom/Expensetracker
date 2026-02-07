@@ -18,7 +18,11 @@ class SmartSchedulingWidget extends StatefulWidget {
 class _SmartSchedulingWidgetState extends State<SmartSchedulingWidget> {
   bool _isExpanded = false;
 
-  Future<void> _selectTime(BuildContext context, String key, String currentTime) async {
+  Future<void> _selectTime(
+    BuildContext context,
+    String key,
+    String currentTime,
+  ) async {
     final parts = currentTime.split(':');
     final initialTime = TimeOfDay(
       hour: int.parse(parts[0]),
@@ -31,7 +35,8 @@ class _SmartSchedulingWidgetState extends State<SmartSchedulingWidget> {
     );
 
     if (picked != null) {
-      final formattedTime = '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+      final formattedTime =
+          '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
       widget.onUpdate(key, formattedTime);
     }
   }
@@ -88,7 +93,9 @@ class _SmartSchedulingWidgetState extends State<SmartSchedulingWidget> {
                           'Smart Scheduling',
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
-                            color: isDark ? Colors.white : const Color(0xFF212121),
+                            color: isDark
+                                ? Colors.white
+                                : const Color(0xFF212121),
                           ),
                         ),
                         SizedBox(height: 0.5.h),
@@ -200,9 +207,7 @@ class _SmartSchedulingWidgetState extends State<SmartSchedulingWidget> {
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
-            color: isDark
-                ? const Color(0xFF3D3D3D)
-                : const Color(0xFFE0E0E0),
+            color: isDark ? const Color(0xFF3D3D3D) : const Color(0xFFE0E0E0),
             width: 0.5,
           ),
         ),
@@ -260,9 +265,7 @@ class _SmartSchedulingWidgetState extends State<SmartSchedulingWidget> {
         decoration: BoxDecoration(
           border: Border(
             bottom: BorderSide(
-              color: isDark
-                  ? const Color(0xFF3D3D3D)
-                  : const Color(0xFFE0E0E0),
+              color: isDark ? const Color(0xFF3D3D3D) : const Color(0xFFE0E0E0),
               width: 0.5,
             ),
           ),
@@ -316,9 +319,7 @@ class _SmartSchedulingWidgetState extends State<SmartSchedulingWidget> {
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
-            color: isDark
-                ? const Color(0xFF3D3D3D)
-                : const Color(0xFFE0E0E0),
+            color: isDark ? const Color(0xFF3D3D3D) : const Color(0xFFE0E0E0),
             width: 0.5,
           ),
         ),

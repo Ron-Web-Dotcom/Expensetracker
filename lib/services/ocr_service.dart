@@ -3,11 +3,21 @@ import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart
 
 /// Service for extracting text from receipt images using OCR
 class OcrService {
-  final TextRecognizer _textRecognizer = TextRecognizer();
+  static OcrService? _instance;
+  TextRecognizer? _textRecognizer;
+
+  factory OcrService() => _instance ??= OcrService._internal();
+  OcrService._internal();
+
+  TextRecognizer get recognizer {
+    _textRecognizer ??= TextRecognizer();
+    return _textRecognizer!;
+  }
 
   /// Dispose resources
   void dispose() {
-    _textRecognizer.close();
+    _textRecognizer?.close();
+    _textRecognizer = null;
   }
 
   /// Process image with proper resource cleanup
@@ -15,7 +25,7 @@ class OcrService {
     InputImage? inputImage;
     try {
       inputImage = InputImage.fromFilePath(imagePath);
-      final recognizedText = await _textRecognizer.processImage(inputImage);
+      final recognizedText = await recognizer.processImage(inputImage);
       return _parseReceiptText(recognizedText.text);
     } catch (e) {
       if (kDebugMode) {

@@ -15,6 +15,9 @@ import '../presentation/smart_alerts_center/smart_alerts_center.dart';
 import '../presentation/splash_screen/splash_screen.dart';
 import '../presentation/transaction_history/transaction_history.dart';
 import '../presentation/user_guide_library/user_guide_library.dart';
+import '../presentation/privacy_compliance_center/privacy_compliance_center.dart';
+import '../presentation/app_store_readiness_dashboard/app_store_readiness_dashboard.dart';
+import '../presentation/legal_documents_viewer/legal_documents_viewer.dart';
 
 class AppRoutes {
   static const String initial = splash;
@@ -34,6 +37,10 @@ class AppRoutes {
   static const String dailyReminderSettings = '/daily-reminder-settings';
   static const String reminderNotificationCenter =
       '/reminder-notification-center';
+  static const String privacyComplianceCenter = '/privacy-compliance-center';
+  static const String appStoreReadinessDashboard =
+      '/app-store-readiness-dashboard';
+  static const String legalDocumentsViewer = '/legal-documents-viewer';
 
   static Map<String, WidgetBuilder> get routes => {
     splash: (context) => const SplashScreen(),
@@ -51,6 +58,9 @@ class AppRoutes {
     enhancedSettings: (context) => const EnhancedSettings(),
     dailyReminderSettings: (context) => const DailyReminderSettings(),
     reminderNotificationCenter: (context) => const ReminderNotificationCenter(),
+    privacyComplianceCenter: (context) => const PrivacyComplianceCenter(),
+    appStoreReadinessDashboard: (context) => const AppStoreReadinessDashboard(),
+    legalDocumentsViewer: (context) => const LegalDocumentsViewer(),
   };
 
   /// Generate route with custom animations

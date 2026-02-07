@@ -35,6 +35,7 @@ class _BiometricAuthenticationState extends State<BiometricAuthentication>
     super.initState();
     _initializePulseAnimation();
     _checkBiometricSupport();
+    _checkLockoutStatus();
     // Trigger biometric prompt immediately on screen appearance
     Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) {
@@ -68,6 +69,23 @@ class _BiometricAuthenticationState extends State<BiometricAuthentication>
         setState(() {
           _errorMessage = 'Failed to check biometric support';
         });
+      }
+    }
+  }
+
+  Future<void> _checkLockoutStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final lockoutEnd = prefs.getInt('biometric_lockout_end');
+    if (lockoutEnd != null) {
+      final now = DateTime.now().millisecondsSinceEpoch;
+      if (now < lockoutEnd) {
+        if (mounted) {
+          setState(() {
+            _failedAttempts = _maxFailedAttempts;
+          });
+        }
+      } else {
+        await prefs.remove('biometric_lockout_end');
       }
     }
   }
@@ -258,10 +276,7 @@ class _BiometricAuthenticationState extends State<BiometricAuthentication>
             _handleAuthenticationFailure();
           }
         })
-        .catchError((error) {
-          _handlePlatformException(error as PlatformException);
-        })
-        .whenComplete(() {
+        .catchError((e) {
           if (mounted) {
             setState(() {
               _isAuthenticating = false;

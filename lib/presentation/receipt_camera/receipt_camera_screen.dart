@@ -44,13 +44,29 @@ class _ReceiptCameraScreenState extends State<ReceiptCameraScreen> {
       final hasPermission = await _requestCameraPermission();
       if (!hasPermission) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Camera permission is required to capture receipts',
+          final shouldUseGallery = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Camera Permission Required'),
+              content: const Text(
+                'Camera permission is required to capture receipts. Would you like to select a photo from your gallery instead?',
               ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Use Gallery'),
+                ),
+              ],
             ),
           );
+
+          if (shouldUseGallery == true) {
+            await _selectFromGallery();
+          }
         }
         return;
       }

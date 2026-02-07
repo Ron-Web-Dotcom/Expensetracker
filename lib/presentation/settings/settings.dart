@@ -5,7 +5,6 @@ import 'package:sizer/sizer.dart';
 
 import '../../core/app_export.dart';
 import '../../main.dart';
-import '../../routes/app_routes.dart';
 import '../../services/analytics_service.dart';
 import '../../services/budget_data_service.dart';
 import '../../services/data_export_service.dart';
@@ -14,8 +13,6 @@ import '../../services/locale_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/settings_service.dart';
 import '../../widgets/custom_app_bar.dart';
-import '../../widgets/custom_icon_widget.dart';
-import '../login/login.dart';
 import './widgets/profile_section_widget.dart';
 import './widgets/settings_item_widget.dart';
 import './widgets/settings_section_widget.dart';
@@ -625,10 +622,7 @@ class _SettingsState extends State<Settings> {
                     onTap: () {
                       HapticFeedback.lightImpact();
                       _analytics.trackEvent('tutorial_opened');
-                      Navigator.pushNamed(
-                        context,
-                        '/interactive-tutorial',
-                      );
+                      Navigator.pushNamed(context, '/interactive-tutorial');
                     },
                   ),
                   SettingsItemWidget(
@@ -656,6 +650,42 @@ class _SettingsState extends State<Settings> {
               SettingsSectionWidget(
                 title: tr['SUPPORT & LEGAL'] ?? "SUPPORT & LEGAL",
                 children: [
+                  SettingsItemWidget(
+                    title: 'Privacy & Compliance Center',
+                    subtitle: 'Manage privacy settings and data rights',
+                    leadingIcon: 'shield',
+                    trailing: CustomIconWidget(
+                      iconName: 'chevron_right',
+                      color: isDark
+                          ? const Color(0xFFB0B0B0)
+                          : const Color(0xFF757575),
+                      size: 5.w,
+                    ),
+                    onTap: () {
+                      Navigator.pushNamed(
+                        context,
+                        AppRoutes.privacyComplianceCenter,
+                      );
+                    },
+                  ),
+                  SettingsItemWidget(
+                    title: 'App Store Readiness',
+                    subtitle: 'View submission checklist and compliance status',
+                    leadingIcon: 'verified',
+                    trailing: CustomIconWidget(
+                      iconName: 'chevron_right',
+                      color: isDark
+                          ? const Color(0xFFB0B0B0)
+                          : const Color(0xFF757575),
+                      size: 5.w,
+                    ),
+                    onTap: () {
+                      Navigator.pushNamed(
+                        context,
+                        AppRoutes.appStoreReadinessDashboard,
+                      );
+                    },
+                  ),
                   SettingsItemWidget(
                     title: tr['Help Center'] ?? "Help Center",
                     subtitle:

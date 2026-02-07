@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../presentation/settings/settings.dart';
+import './secure_storage_service.dart';
 
 /// Service for managing app settings and preferences
 class SettingsService {
@@ -27,6 +27,7 @@ class SettingsService {
   static const String _dailyReminderTimeKey = 'daily_reminder_time';
 
   final LocalAuthentication _localAuth = LocalAuthentication();
+  final SecureStorageService _secureStorage = SecureStorageService();
 
   // Security Settings
   Future<bool> isBiometricEnabled() async {
@@ -82,12 +83,14 @@ class SettingsService {
   }
 
   Future<void> logLoginAttempt(bool success) async {
-    final prefs = await SharedPreferences.getInstance();
-    final historyJson = prefs.getString(_loginHistoryKey);
+    // Read encrypted login history
+    final encryptedHistory = await _secureStorage.readEncrypted(
+      _loginHistoryKey,
+    );
 
     List<Map<String, dynamic>> history = [];
-    if (historyJson != null) {
-      history = List<Map<String, dynamic>>.from(jsonDecode(historyJson));
+    if (encryptedHistory != null) {
+      history = List<Map<String, dynamic>>.from(jsonDecode(encryptedHistory));
     }
 
     history.insert(0, {
@@ -100,7 +103,8 @@ class SettingsService {
       history = history.sublist(0, 50);
     }
 
-    await prefs.setString(_loginHistoryKey, jsonEncode(history));
+    // Save encrypted login history
+    await _secureStorage.saveEncrypted(_loginHistoryKey, jsonEncode(history));
   }
 
   Future<List<Map<String, dynamic>>> getLoginHistory() async {
@@ -289,5 +293,27 @@ class SettingsService {
     await prefs.clear();
     await prefs.setBool('is_first_time', true);
     await prefs.setBool('has_seen_onboarding', false);
+  }
+
+  /// Reset all settings to defaults (for privacy data deletion)
+  Future<void> resetToDefaults() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    // Keep only essential keys, remove all user data
+    final keysToKeep = ['app_first_launch', 'onboarding_completed'];
+    final allKeys = prefs.getKeys();
+
+    for (var key in allKeys) {
+      if (!keysToKeep.contains(key)) {
+        await prefs.remove(key);
+      }
+    }
+
+    // Set default values
+    await prefs.setString('theme_mode', 'system');
+    await prefs.setString('language', 'en');
+    await prefs.setString('currency', 'USD');
+    await prefs.setBool('biometric_enabled', false);
+    await prefs.setBool('notifications_enabled', true);
   }
 }

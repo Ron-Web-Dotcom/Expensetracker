@@ -1,5 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 
 /// Analytics service for tracking user behavior and engagement metrics
 /// Stores all data locally for privacy-first approach
@@ -158,18 +159,24 @@ class AnalyticsService {
     };
   }
 
-  /// Get recent events (last 100)
-  Future<List<Map<String, dynamic>>> getRecentEvents({int limit = 100}) async {
+  /// Get recent analytics events
+  Future<List<Map<String, dynamic>>> getRecentEvents({int limit = 50}) async {
     final prefs = await SharedPreferences.getInstance();
     final eventsJson = prefs.getString(_eventsKey);
-
     if (eventsJson == null) return [];
 
-    final events = (jsonDecode(eventsJson) as List)
-        .map((e) => e as Map<String, dynamic>)
-        .toList();
+    try {
+      final events = (jsonDecode(eventsJson) as List)
+          .map((e) => e as Map<String, dynamic>)
+          .toList();
 
-    return events.take(limit).toList();
+      return events.take(limit).toList();
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error decoding analytics events: $e');
+      }
+      return [];
+    }
   }
 
   /// Clear all analytics data

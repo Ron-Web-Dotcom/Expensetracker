@@ -1,10 +1,13 @@
 import 'dart:convert';
+import 'dart:io'; // Add this import
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import './settings_service.dart';
 
@@ -86,6 +89,26 @@ class NotificationService {
   }
 
   Future<bool> requestPermissions() async {
+    // Android 13+ requires runtime permission request
+    if (!kIsWeb && Platform.isAndroid) {
+      try {
+        final androidInfo = await DeviceInfoPlugin().androidInfo;
+        if (androidInfo.version.sdkInt >= 33) {
+          final status = await Permission.notification.request();
+          if (!status.isGranted) {
+            if (kDebugMode) {
+              print('Notification permission denied on Android 13+');
+            }
+            return false;
+          }
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          print('Error checking Android version: $e');
+        }
+      }
+    }
+
     final androidPlugin = _notifications
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin

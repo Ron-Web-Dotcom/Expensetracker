@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:sizer/sizer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../core/app_export.dart';
 import '../../services/analytics_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/settings_service.dart';
@@ -255,7 +253,7 @@ class _DailyReminderSettingsState extends State<DailyReminderSettings> {
                         Switch(
                           value: _reminderEnabled,
                           onChanged: _toggleReminder,
-                          activeColor: theme.colorScheme.primary,
+                          activeThumbColor: theme.colorScheme.primary,
                         ),
                       ],
                     ),

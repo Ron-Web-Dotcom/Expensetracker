@@ -79,7 +79,8 @@ class _HelpCenterState extends State<HelpCenter> {
       "title": "Year-End Financial Review Guide",
       "description":
           "Prepare for tax season with comprehensive expense reports",
-      "image": "https://images.unsplash.com/photo-1584346881556-19b8804d414f",
+      "image":
+          "https://img.rocket.new/generatedImages/rocket_gen_img_1055fe04e-1767962172072.png",
       "semanticLabel":
           "Calendar and financial documents on desk with calculator and pen",
       "readTime": "8 min",
