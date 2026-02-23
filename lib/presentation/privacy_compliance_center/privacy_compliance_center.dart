@@ -14,7 +14,8 @@ class PrivacyComplianceCenter extends StatefulWidget {
   const PrivacyComplianceCenter({Key? key}) : super(key: key);
 
   @override
-  State<PrivacyComplianceCenter> createState() => _PrivacyComplianceCenterState();
+  State<PrivacyComplianceCenter> createState() =>
+      _PrivacyComplianceCenterState();
 }
 
 class _PrivacyComplianceCenterState extends State<PrivacyComplianceCenter> {

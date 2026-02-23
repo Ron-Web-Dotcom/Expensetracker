@@ -88,7 +88,7 @@ class _InteractiveTutorialState extends State<InteractiveTutorial>
       "highlightArea": "dashboard",
       "action": "Explore the dashboard",
       "image":
-          "https://img.rocket.new/generatedImages/rocket_gen_img_1fa463b57-1766849749855.png",
+          "https://img.rocket.new/generatedImages/rocket_gen_img_119b3721b-1770471763165.png",
       "semanticLabel":
           "Dashboard showing spending summary and transaction list",
     },

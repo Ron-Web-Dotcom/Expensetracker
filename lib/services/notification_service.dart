@@ -43,8 +43,11 @@ class NotificationService {
 
     // Prevent race condition with concurrent initialization calls
     if (_isInitializing) {
-      while (_isInitializing) {
+      // Wait for ongoing initialization to complete
+      int attempts = 0;
+      while (_isInitializing && attempts < 100) {
         await Future.delayed(const Duration(milliseconds: 50));
+        attempts++;
       }
       return;
     }
@@ -79,6 +82,7 @@ class NotificationService {
       if (kDebugMode) {
         print('Notification service initialization error: $e');
       }
+      // Don't throw - allow app to continue without notifications
     } finally {
       _isInitializing = false;
     }

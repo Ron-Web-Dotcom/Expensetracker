@@ -1,20 +1,20 @@
 import 'dart:async';
 import 'dart:ui';
 
-import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sizer/sizer.dart';
 import 'package:timezone/data/latest.dart' as tz;
 
 import './core/app_export.dart';
-import './routes/app_routes.dart';
 import './services/certificate_pinning_service.dart';
 import './services/crashlytics_service.dart';
 import './services/notification_service.dart';
+import './services/performance_monitoring_service.dart';
 import './services/secure_storage_service.dart';
-import './theme/app_theme.dart';
 import './widgets/custom_error_widget.dart';
 
 // Global ValueNotifier for theme changes
@@ -30,23 +30,40 @@ final ValueNotifier<Locale> localeNotifier = ValueNotifier(
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase
-  await Firebase.initializeApp();
+  // Initialize performance monitoring
+  final performanceMonitoring = PerformanceMonitoringService();
+  performanceMonitoring.initialize();
 
   // Initialize Crashlytics
   final crashlytics = CrashlyticsService();
   await crashlytics.initialize();
 
-  // Capture Flutter errors
+  // Set up Flutter error handling
   FlutterError.onError = (FlutterErrorDetails details) {
     crashlytics.recordFlutterError(details);
+    if (kDebugMode) {
+      debugPrint('Flutter Error: ${details.exception}');
+      debugPrint('Stack trace: ${details.stack}');
+    }
   };
 
-  // Capture async errors
+  // Set up platform error handling
   PlatformDispatcher.instance.onError = (error, stack) {
-    crashlytics.recordError(error, stack, fatal: true);
+    crashlytics.recordError(error, stack);
+    if (kDebugMode) {
+      debugPrint('Platform Error: $error');
+      debugPrint('Stack trace: $stack');
+    }
     return true;
   };
+
+  // Track frame rendering performance
+  SchedulerBinding.instance.addTimingsCallback((List<FrameTiming> timings) {
+    for (final timing in timings) {
+      final frameDuration = timing.totalSpan;
+      performanceMonitoring.recordFrameTime(frameDuration);
+    }
+  });
 
   // Initialize secure storage FIRST (for encryption keys)
   final secureStorage = SecureStorageService();
@@ -68,9 +85,6 @@ void main() async {
 
   // 🚨 CRITICAL: Custom error handling - DO NOT REMOVE
   ErrorWidget.builder = (FlutterErrorDetails details) {
-    // Also log to crashlytics
-    crashlytics.recordFlutterError(details);
-
     if (!_hasShownError) {
       _hasShownError = true;
 

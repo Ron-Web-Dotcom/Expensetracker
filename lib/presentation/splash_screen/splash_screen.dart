@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../routes/app_routes.dart';
 
 /// Splash screen that provides branded app launch experience
 /// Handles initialization of financial data services and authentication status
@@ -104,6 +105,7 @@ class _SplashScreenState extends State<SplashScreen>
       }
     } catch (e) {
       // Handle initialization errors
+      debugPrint('Initialization error: $e');
       if (mounted) {
         setState(() {
           _initializationStatus = 'Initialization failed';
@@ -118,7 +120,16 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   void _navigateToNextScreen() async {
-    Navigator.pushReplacementNamed(context, '/onboarding');
+    if (!mounted) return;
+    try {
+      await Navigator.pushReplacementNamed(context, AppRoutes.onboarding);
+    } catch (e) {
+      debugPrint('Navigation error: $e');
+      // Fallback to dashboard if onboarding fails
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, AppRoutes.expenseDashboard);
+      }
+    }
   }
 
   void _showRecoveryOptions() {
@@ -145,7 +156,10 @@ class _SplashScreenState extends State<SplashScreen>
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              Navigator.pushReplacementNamed(context, '/expense-dashboard');
+              Navigator.pushReplacementNamed(
+                context,
+                AppRoutes.expenseDashboard,
+              );
             },
             child: const Text('Continue'),
           ),

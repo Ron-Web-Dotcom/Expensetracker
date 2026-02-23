@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:sizer/sizer.dart';
 
-import '../../../core/app_export.dart';
-import '../../widgets/custom_icon_widget.dart';
 import '../../services/analytics_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/settings_service.dart';
@@ -18,6 +15,7 @@ import './widgets/payment_method_widget.dart';
 import './widgets/receipt_attachment_widget.dart';
 import './widgets/animated_background_widget.dart';
 import './widgets/transaction_type_toggle_widget.dart';
+import '../../widgets/error_boundary.dart';
 
 class AddExpense extends StatefulWidget {
   const AddExpense({super.key});
@@ -26,7 +24,7 @@ class AddExpense extends StatefulWidget {
   State<AddExpense> createState() => _AddExpenseState();
 }
 
-class _AddExpenseState extends State<AddExpense> {
+class _AddExpenseState extends State<AddExpense> with ErrorHandlerMixin {
   final AnalyticsService _analytics = AnalyticsService();
   final NotificationService _notificationService = NotificationService();
   final SettingsService _settingsService = SettingsService();
@@ -165,7 +163,7 @@ class _AddExpenseState extends State<AddExpense> {
     }
 
     // Validate category
-    if (_selectedCategory == null) {
+    if (_selectedCategory == null || _selectedCategory!.isEmpty) {
       setState(() {
         _categoryError = 'Please select a category';
       });
@@ -176,6 +174,11 @@ class _AddExpenseState extends State<AddExpense> {
     if (_descriptionController.text.trim().isEmpty) {
       setState(() {
         _descriptionError = 'Please enter a description';
+      });
+      isValid = false;
+    } else if (_descriptionController.text.trim().length > 200) {
+      setState(() {
+        _descriptionError = 'Description cannot exceed 200 characters';
       });
       isValid = false;
     }
@@ -271,73 +274,99 @@ class _AddExpenseState extends State<AddExpense> {
   }
 
   Future<void> _saveExpense() async {
-    if (!_validateForm()) {
-      return;
-    }
-
-    setState(() => _isSaving = true);
-    HapticFeedback.mediumImpact();
-
-    // Clean and parse amount safely
-    final cleanAmount = _amountController.text.replaceAll(',', '').trim();
-    final expenseAmount = double.tryParse(cleanAmount);
-
-    if (expenseAmount == null) {
+    await safeAsync(() async {
+      // Clear previous errors
       setState(() {
-        _isSaving = false;
-        _amountError = 'Invalid amount format';
+        _amountError = null;
+        _categoryError = null;
+        _descriptionError = null;
       });
-      return;
-    }
 
-    // Save expense to local storage
-    await _expenseDataService.saveExpense(
-      amount: expenseAmount,
-      category: _selectedCategory!,
-      date: _selectedDate,
-      paymentMethod: _selectedPaymentMethod,
-      description: _descriptionController.text.trim(),
-      receiptPhotos: _receiptPhotos,
-      hasLocation: _enableLocation,
-      transactionType: _transactionType,
-    );
+      // Validate inputs
+      bool isValid = true;
 
-    // Track expense addition
-    await _analytics.trackExpenseAdded(
-      amount: expenseAmount,
-      category: _selectedCategory!,
-      paymentMethod: _selectedPaymentMethod,
-    );
+      // Validate amount
+      final amountText = _amountController.text.trim();
+      final amount = double.tryParse(amountText);
 
-    // Simulate AI categorization tracking
-    await _analytics.trackAICategorization(
-      suggestedCategory: _selectedCategory!,
-      finalCategory: _selectedCategory!,
-      wasAccepted: true,
-    );
+      if (amount == null || amount <= 0 || amount.isNaN || amount.isInfinite) {
+        setState(
+          () => _amountError = 'Please enter a valid amount greater than 0',
+        );
+        isValid = false;
+      } else if (amount > 1000000) {
+        setState(() => _amountError = 'Amount cannot exceed \$1,000,000');
+        isValid = false;
+      }
 
-    // Check budget alerts after adding expense
-    await _checkBudgetAlertsAfterExpense();
+      // Validate category
+      if (_selectedCategory == null || _selectedCategory!.isEmpty) {
+        setState(() => _categoryError = 'Please select a category');
+        isValid = false;
+      }
 
-    if (!mounted) return;
+      if (!isValid) {
+        _analytics.trackFormSubmission(
+          'add_expense',
+          false,
+          errorMessage: 'Validation failed',
+        );
+        return;
+      }
 
-    // Show success message
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Expense saved successfully',
-          style: Theme.of(
-            context,
-          ).textTheme.bodyMedium?.copyWith(color: Colors.white),
-        ),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
-      ),
-    );
+      setState(() => _isSaving = true);
 
-    // Navigate back to dashboard
-    Navigator.pushReplacementNamed(context, '/expense-dashboard');
+      if (_isEditMode && _editingTransactionId != null) {
+        // Update existing expense
+        await _expenseDataService.updateExpense(
+          id: _editingTransactionId!,
+          amount: amount!,
+          category: _selectedCategory!,
+          date: _selectedDate,
+          paymentMethod: _selectedPaymentMethod,
+          description: _descriptionController.text.trim(),
+          receiptPhotos: _receiptPhotos,
+          hasLocation: _enableLocation,
+          transactionType: _transactionType,
+        );
+
+        _analytics.trackEvent(
+          'expense_updated',
+          parameters: {
+            'category': _selectedCategory!,
+            'amount': amount,
+            'transaction_type': _transactionType,
+          },
+        );
+      } else {
+        // Save new expense
+        await _expenseDataService.saveExpense(
+          amount: amount!,
+          category: _selectedCategory!,
+          date: _selectedDate,
+          paymentMethod: _selectedPaymentMethod,
+          description: _descriptionController.text.trim(),
+          receiptPhotos: _receiptPhotos,
+          hasLocation: _enableLocation,
+          transactionType: _transactionType,
+        );
+
+        _analytics.trackExpenseAdded(
+          amount: amount,
+          category: _selectedCategory!,
+          paymentMethod: _selectedPaymentMethod,
+        );
+        _analytics.trackFormSubmission('add_expense', true);
+      }
+
+      // Check budget alerts
+      await _checkBudgetAlertsAfterExpense();
+
+      if (mounted) {
+        setState(() => _isSaving = false);
+        Navigator.pop(context, true);
+      }
+    }, context: 'Saving expense');
   }
 
   Future<void> _checkBudgetAlertsAfterExpense() async {
@@ -449,178 +478,163 @@ class _AddExpenseState extends State<AddExpense> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
-      body: Stack(
-        children: [
-          // Animated Background with dynamic color
-          AnimatedBackgroundWidget(color: _primaryColor),
-
-          // Main Content
-          SafeArea(
-            child: Column(
-              children: [
-                // Custom AppBar
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 2.w, vertical: 1.h),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        icon: CustomIconWidget(
-                          iconName: 'close',
-                          color: theme.colorScheme.onSurface,
-                          size: 24,
-                        ),
-                        onPressed: _handleCancel,
-                      ),
-                      Expanded(
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            CustomIconWidget(
-                              iconName: _transactionType == 'income'
-                                  ? 'trending_up'
-                                  : 'trending_down',
-                              color: _primaryColor,
-                              size: 24,
-                            ),
-                            SizedBox(width: 2.w),
-                            Text(
-                              _screenTitle,
-                              style: theme.textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: _primaryColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: _canSave ? _saveExpense : null,
-                        child: Text(
-                          'Save',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            color: _canSave
-                                ? _primaryColor
-                                : theme.colorScheme.onSurface.withValues(
-                                    alpha: 0.5,
-                                  ),
-                            fontWeight: FontWeight.w600,
+    return ErrorBoundary(
+      screenName: 'AddExpense',
+      child: Semantics(
+        label: 'Add Expense Screen',
+        child: Scaffold(
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          appBar: AppBar(
+            title: Semantics(
+              label: _isEditMode
+                  ? 'Edit ${_transactionType == "expense" ? "Expense" : "Income"}'
+                  : 'Add ${_transactionType == "expense" ? "Expense" : "Income"}',
+              child: Text(
+                _isEditMode
+                    ? 'Edit ${_transactionType == "expense" ? "Expense" : "Income"}'
+                    : 'Add ${_transactionType == "expense" ? "Expense" : "Income"}',
+              ),
+            ),
+            leading: Semantics(
+              label: 'Go back',
+              button: true,
+              child: IconButton(
+                icon: const Icon(Icons.arrow_back, semanticLabel: 'Back'),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+          ),
+          body: Stack(
+            children: [
+              const AnimatedBackgroundWidget(),
+              Semantics(
+                label: 'Expense entry form',
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.all(4.w),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(height: 2.h),
+                        Semantics(
+                          label: 'Transaction type selector',
+                          child: TransactionTypeToggleWidget(
+                            selectedType: _transactionType,
+                            onTypeChanged: (type) {
+                              setState(() => _transactionType = type);
+                              _analytics.trackEvent(
+                                'transaction_type_changed',
+                                parameters: {'type': type},
+                              );
+                            },
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Scrollable Form
-                Expanded(
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 4.w),
-                      child: Form(
-                        key: _formKey,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            SizedBox(height: 2.h),
-
-                            // Transaction Type Toggle (only show if not in edit mode)
-                            if (!_isEditMode)
-                              Column(
-                                children: [
-                                  TransactionTypeToggleWidget(
-                                    selectedType: _transactionType,
-                                    onTypeChanged:
-                                        _handleTransactionTypeChanged,
-                                  ),
-                                  SizedBox(height: 3.h),
-                                ],
-                              ),
-
-                            // Amount Input
-                            AmountInputWidget(
-                              controller: _amountController,
-                              errorText: _amountError,
-                              onChanged: (value) {
-                                setState(() {
-                                  _amountError = null;
-                                });
-                              },
-                              transactionType: _transactionType,
-                            ),
-
-                            SizedBox(height: 3.h),
-
-                            // Category Selector
-                            CategorySelectorWidget(
-                              selectedCategory: _selectedCategory,
-                              onCategorySelected: _handleCategorySelected,
-                              errorText: _categoryError,
-                              transactionType: _transactionType,
-                            ),
-
-                            SizedBox(height: 3.h),
-
-                            // Date Picker
-                            DatePickerWidget(
-                              selectedDate: _selectedDate,
-                              onDateSelected: _handleDateSelected,
-                            ),
-
-                            SizedBox(height: 3.h),
-
-                            // Description Input
-                            DescriptionInputWidget(
-                              controller: _descriptionController,
-                              errorText: _descriptionError,
-                              onChanged: (value) {
-                                setState(() {
-                                  _descriptionError = null;
-                                });
-                              },
-                            ),
-
-                            SizedBox(height: 3.h),
-
-                            // Receipt Attachment
-                            ReceiptAttachmentWidget(
-                              receiptPhotos: _receiptPhotos,
-                              onReceiptAdded: _handleReceiptAdded,
-                              onReceiptRemoved: _handleReceiptRemoved,
-                              onReceiptScanned: _handleReceiptScanned,
-                            ),
-
-                            SizedBox(height: 3.h),
-
-                            // Payment Method
-                            PaymentMethodWidget(
-                              selectedMethod: _selectedPaymentMethod,
-                              onMethodChanged: _handlePaymentMethodChanged,
-                            ),
-
-                            SizedBox(height: 3.h),
-
-                            // Location Toggle
-                            LocationToggleWidget(
-                              enabled: _enableLocation,
-                              onToggled: _handleLocationToggled,
-                            ),
-
-                            SizedBox(height: 4.h),
-                          ],
+                        SizedBox(height: 3.h),
+                        Semantics(
+                          label: 'Amount input field',
+                          textField: true,
+                          child: AmountInputWidget(
+                            controller: _amountController,
+                            errorText: _amountError,
+                            transactionType: _transactionType,
+                          ),
                         ),
-                      ),
+                        SizedBox(height: 2.h),
+                        Semantics(
+                          label: 'Category selector',
+                          button: true,
+                          child: CategorySelectorWidget(
+                            selectedCategory: _selectedCategory,
+                            onCategorySelected: (category) {
+                              setState(() {
+                                _selectedCategory = category;
+                                _categoryError = null;
+                              });
+                            },
+                            errorText: _categoryError,
+                            transactionType: _transactionType,
+                          ),
+                        ),
+                        SizedBox(height: 2.h),
+                        Semantics(
+                          label: 'Date picker',
+                          button: true,
+                          child: DatePickerWidget(
+                            selectedDate: _selectedDate,
+                            onDateSelected: (date) =>
+                                setState(() => _selectedDate = date),
+                          ),
+                        ),
+                        SizedBox(height: 2.h),
+                        Semantics(
+                          label: 'Description input field',
+                          textField: true,
+                          child: DescriptionInputWidget(
+                            controller: _descriptionController,
+                            errorText: _descriptionError,
+                          ),
+                        ),
+                        SizedBox(height: 2.h),
+                        Semantics(
+                          label: 'Payment method selector',
+                          child: PaymentMethodWidget(
+                            selectedMethod: _selectedPaymentMethod,
+                            onMethodChanged: (method) =>
+                                setState(() => _selectedPaymentMethod = method),
+                          ),
+                        ),
+                        SizedBox(height: 2.h),
+                        Semantics(
+                          label: 'Receipt attachment options',
+                          child: ReceiptAttachmentWidget(
+                            receiptPhotos: _receiptPhotos,
+                            onReceiptAdded: _handleReceiptAdded,
+                            onReceiptRemoved: _handleReceiptRemoved,
+                          ),
+                        ),
+                        SizedBox(height: 2.h),
+                        Semantics(
+                          label: 'Location tracking toggle',
+                          child: LocationToggleWidget(
+                            enabled: _enableLocation,
+                            onToggled: (value) =>
+                                setState(() => _enableLocation = value),
+                          ),
+                        ),
+                        SizedBox(height: 4.h),
+                        Semantics(
+                          label: _isEditMode
+                              ? 'Update ${_transactionType == "expense" ? "expense" : "income"}'
+                              : 'Save ${_transactionType == "expense" ? "expense" : "income"}',
+                          button: true,
+                          onTap: _isSaving ? null : _saveExpense,
+                          child: SizedBox(
+                            width: double.infinity,
+                            height: 6.h,
+                            child: ElevatedButton(
+                              onPressed: _isSaving ? null : _saveExpense,
+                              child: _isSaving
+                                  ? const CircularProgressIndicator(
+                                      color: Colors.white,
+                                    )
+                                  : Text(
+                                      _isEditMode
+                                          ? 'Update ${_transactionType == "expense" ? "Expense" : "Income"}'
+                                          : 'Save ${_transactionType == "expense" ? "Expense" : "Income"}',
+                                    ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 2.h),
+                      ],
                     ),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

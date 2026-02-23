@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:sizer/sizer.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sizer/sizer.dart';
 
 import '../../core/app_export.dart';
-import '../../widgets/custom_app_bar.dart';
-import '../../widgets/custom_bottom_bar.dart';
-import '../../widgets/custom_icon_widget.dart';
+import '../../routes/app_routes.dart';
 import '../../services/analytics_service.dart';
-import '../../services/notification_service.dart';
-import '../../services/settings_service.dart';
 import '../../services/expense_data_service.dart';
 import '../../services/expense_notifier.dart';
+import '../../services/notification_service.dart';
+import '../../services/settings_service.dart';
+import '../../widgets/custom_app_bar.dart';
+import '../../widgets/custom_bottom_bar.dart';
+import '../../widgets/error_boundary.dart';
 import './widgets/greeting_header_widget.dart';
 import './widgets/monthly_spending_card_widget.dart';
 import './widgets/quick_actions_widget.dart';
@@ -27,7 +28,8 @@ class ExpenseDashboard extends StatefulWidget {
   State<ExpenseDashboard> createState() => _ExpenseDashboardState();
 }
 
-class _ExpenseDashboardState extends State<ExpenseDashboard> {
+class _ExpenseDashboardState extends State<ExpenseDashboard>
+    with ErrorHandlerMixin {
   final AnalyticsService _analytics = AnalyticsService();
   final NotificationService _notificationService = NotificationService();
   final SettingsService _settingsService = SettingsService();
@@ -84,55 +86,58 @@ class _ExpenseDashboardState extends State<ExpenseDashboard> {
   }
 
   Future<void> _loadDashboardData() async {
-    final now = DateTime.now();
-    final startOfMonth = DateTime(now.year, now.month, 1);
-    final endOfMonth = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
+    await safeAsync(() async {
+      final now = DateTime.now();
+      final startOfMonth = DateTime(now.year, now.month, 1);
+      final endOfMonth = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
 
-    final monthlySpending = await _expenseDataService.getTotalSpending(
-      startDate: startOfMonth,
-      endDate: endOfMonth,
-    );
+      final monthlySpending = await _expenseDataService.getTotalSpending(
+        startDate: startOfMonth,
+        endDate: endOfMonth,
+      );
 
-    final recentExpenses = await _expenseDataService.getExpensesByDateRange(
-      startDate: startOfMonth,
-      endDate: endOfMonth,
-    );
+      final recentExpenses = await _expenseDataService.getExpensesByDateRange(
+        startDate: startOfMonth,
+        endDate: endOfMonth,
+      );
 
-    // Sort by date descending and take top 5
-    recentExpenses.sort(
-      (a, b) => DateTime.parse(b['date']).compareTo(DateTime.parse(a['date'])),
-    );
-    final recentTransactions = recentExpenses.take(5).map((expense) {
-      final expenseDate = DateTime.parse(expense['date']);
-      final category = expense['category'] as String;
-      final amount = (expense['amount'] as num).toDouble();
-      return {
-        'id': expense['id'],
-        'description': expense['description'] ?? 'Expense',
-        'amount': amount,
-        'category': category,
-        'categoryIcon': _categoryIcons[category] ?? 'more_horiz',
-        'date': expense['date'],
-        'time': DateFormat('h:mm a').format(expenseDate),
-        'paymentMethod': expense['paymentMethod'],
-        'hasReceipt': (expense['receiptPhotos'] as List).isNotEmpty,
-        'receiptPhotos': expense['receiptPhotos'],
-        'hasLocation': expense['hasLocation'] ?? false,
-        'transactionType':
-            expense['transactionType'] ?? (amount > 0 ? 'income' : 'expense'),
-      };
-    }).toList();
+      // Sort by date descending and take top 5
+      recentExpenses.sort(
+        (a, b) =>
+            DateTime.parse(b['date']).compareTo(DateTime.parse(a['date'])),
+      );
+      final recentTransactions = recentExpenses.take(5).map((expense) {
+        final expenseDate = DateTime.parse(expense['date']);
+        final category = expense['category'] as String;
+        final amount = (expense['amount'] as num).toDouble();
+        return {
+          'id': expense['id'],
+          'description': expense['description'] ?? 'Expense',
+          'amount': amount,
+          'category': category,
+          'categoryIcon': _categoryIcons[category] ?? 'more_horiz',
+          'date': expense['date'],
+          'time': DateFormat('h:mm a').format(expenseDate),
+          'paymentMethod': expense['paymentMethod'],
+          'hasReceipt': (expense['receiptPhotos'] as List).isNotEmpty,
+          'receiptPhotos': expense['receiptPhotos'],
+          'hasLocation': expense['hasLocation'] ?? false,
+          'transactionType':
+              expense['transactionType'] ?? (amount > 0 ? 'income' : 'expense'),
+        };
+      }).toList();
 
-    if (mounted) {
-      setState(() {
-        _dashboardData['monthlySpending'] = monthlySpending;
-        _dashboardData['recentTransactions'] = recentTransactions;
-        _dashboardData['spendingPercentage'] =
-            _dashboardData['monthlyBudget'] > 0
-            ? (monthlySpending / _dashboardData['monthlyBudget']) * 100
-            : 0.0;
-      });
-    }
+      if (mounted) {
+        setState(() {
+          _dashboardData['monthlySpending'] = monthlySpending;
+          _dashboardData['recentTransactions'] = recentTransactions;
+          _dashboardData['spendingPercentage'] =
+              _dashboardData['monthlyBudget'] > 0
+              ? (monthlySpending / _dashboardData['monthlyBudget']) * 100
+              : 0.0;
+        });
+      }
+    }, context: 'Loading dashboard data');
   }
 
   Future<void> _loadUserName() async {
@@ -255,94 +260,129 @@ class _ExpenseDashboardState extends State<ExpenseDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
-      appBar: CustomAppBarFactory.standard(
-        title: 'Dashboard',
-        actions: [
-          IconButton(
-            icon: CustomIconWidget(
-              iconName: _isBalanceVisible ? 'visibility' : 'visibility_off',
-              color: theme.colorScheme.onSurface,
-              size: 24,
-            ),
-            onPressed: _toggleBalanceVisibility,
-            tooltip: _isBalanceVisible ? 'Hide Balance' : 'Show Balance',
+    return ErrorBoundary(
+      screenName: 'ExpenseDashboard',
+      child: Semantics(
+        label: 'Expense Dashboard Screen',
+        child: Scaffold(
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          appBar: CustomAppBar(
+            title: 'ExpenseTracker',
+            actions: [
+              Semantics(
+                label: 'Toggle balance visibility',
+                button: true,
+                onTap: () => _toggleBalanceVisibility(),
+                child: IconButton(
+                  icon: Icon(
+                    _isBalanceVisible ? Icons.visibility : Icons.visibility_off,
+                    semanticLabel: _isBalanceVisible
+                        ? 'Hide balance'
+                        : 'Show balance',
+                  ),
+                  onPressed: _toggleBalanceVisibility,
+                ),
+              ),
+              Semantics(
+                label: 'Open notifications',
+                button: true,
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.notifications_outlined,
+                    semanticLabel: 'Notifications',
+                  ),
+                  onPressed: () {
+                    Navigator.pushNamed(
+                      context,
+                      AppRoutes.reminderNotificationCenter,
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: _handleRefresh,
-        color: theme.colorScheme.primary,
-        child: CustomScrollView(
-          controller: _scrollController,
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-            SliverToBoxAdapter(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Greeting Header
-                  GreetingHeaderWidget(
-                    userName: _dashboardData["userName"] as String,
+          body: RefreshIndicator(
+            onRefresh: _handleRefresh,
+            child: Semantics(
+              label: 'Dashboard content, swipe down to refresh',
+              child: SingleChildScrollView(
+                controller: _scrollController,
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Semantics(
+                        label: 'Greeting section',
+                        child: GreetingHeaderWidget(userName: _userName),
+                      ),
+                      SizedBox(height: 2.h),
+                      Semantics(
+                        label: 'Monthly spending overview',
+                        child: MonthlySpendingCardWidget(
+                          monthlySpending: _dashboardData['monthlySpending'],
+                          monthlyBudget: _dashboardData['monthlyBudget'],
+                          spendingPercentage:
+                              _dashboardData['spendingPercentage'],
+                          isBalanceVisible: _isBalanceVisible,
+                        ),
+                      ),
+                      SizedBox(height: 2.h),
+                      Semantics(
+                        label: 'Quick action buttons',
+                        child: QuickActionsWidget(
+                          onAddExpense: () => Navigator.pushNamed(
+                            context,
+                            AppRoutes.addExpense,
+                          ),
+                          onAddIncome: () => Navigator.pushNamed(
+                            context,
+                            AppRoutes.addExpense,
+                            arguments: {'transactionType': 'income'},
+                          ),
+                          onViewBudget: () => Navigator.pushNamed(
+                            context,
+                            AppRoutes.budgetManagement,
+                          ),
+                          onGenerateReport: () => Navigator.pushNamed(
+                            context,
+                            AppRoutes.analyticsDashboard,
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 2.h),
+                      Semantics(
+                        label: 'Recent transactions list',
+                        child: RecentTransactionsWidget(
+                          transactions: _dashboardData['recentTransactions'],
+                          onViewAll: () => Navigator.pushNamed(
+                            context,
+                            AppRoutes.transactionHistory,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-
-                  SizedBox(height: 2.h),
-
-                  // Monthly Spending Card
-                  MonthlySpendingCardWidget(
-                    monthlySpending:
-                        _dashboardData["monthlySpending"] as double,
-                    monthlyBudget: _dashboardData["monthlyBudget"] as double,
-                    spendingPercentage:
-                        _dashboardData["spendingPercentage"] as double,
-                    isBalanceVisible: _isBalanceVisible,
-                  ),
-
-                  SizedBox(height: 3.h),
-
-                  // Recent Transactions
-                  RecentTransactionsWidget(
-                    transactions: (_dashboardData["recentTransactions"] as List)
-                        .map((t) => t as Map<String, dynamic>)
-                        .toList(),
-                    onViewAll: _navigateToTransactionHistory,
-                  ),
-
-                  SizedBox(height: 3.h),
-
-                  // Quick Actions
-                  QuickActionsWidget(
-                    onAddExpense: _navigateToAddExpense,
-                    onAddIncome: _navigateToAddIncome,
-                    onViewBudget: _navigateToBudgetManagement,
-                    onGenerateReport: _navigateToAnalytics,
-                  ),
-
-                  SizedBox(height: 10.h),
-                ],
+                ),
               ),
             ),
-          ],
+          ),
+          floatingActionButton: Semantics(
+            label: 'Add new expense',
+            button: true,
+            onTap: () => Navigator.pushNamed(context, AppRoutes.addExpense),
+            child: FloatingActionButton(
+              onPressed: () =>
+                  Navigator.pushNamed(context, AppRoutes.addExpense),
+              child: const Icon(Icons.add, semanticLabel: 'Add expense'),
+            ),
+          ),
+          bottomNavigationBar: CustomBottomBar(
+            currentIndex: 0,
+            onTap: (index) {},
+          ),
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _navigateToAddExpense,
-        tooltip: 'Add Expense',
-        child: CustomIconWidget(
-          iconName: 'camera_alt',
-          color: theme.colorScheme.onPrimary,
-          size: 28,
-        ),
-      ),
-      bottomNavigationBar: CustomBottomBar(
-        currentIndex: 0,
-        onTap: (index) {
-          HapticFeedback.selectionClick();
-          // Bottom bar navigation handled by CustomBottomBar
-        },
       ),
     );
   }

@@ -1,9 +1,5 @@
-import 'dart:convert';
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
-import 'package:universal_html/html.dart' as html;
 
 import '../../core/app_export.dart';
 import '../../routes/app_routes.dart';

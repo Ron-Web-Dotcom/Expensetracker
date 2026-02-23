@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 
-
 /// App Store Readiness Dashboard screen
 class AppStoreReadinessDashboard extends StatefulWidget {
   const AppStoreReadinessDashboard({Key? key}) : super(key: key);

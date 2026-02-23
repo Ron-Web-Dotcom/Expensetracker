@@ -75,6 +75,7 @@ class AnalyticsService {
     final sessionData = {
       'session_id': DateTime.now().millisecondsSinceEpoch.toString(),
       'start_time': DateTime.now().toIso8601String(),
+      'platform': kIsWeb ? 'web' : 'mobile',
     };
     await prefs.setString(_sessionKey, jsonEncode(sessionData));
     await _updateUserMetrics('total_sessions', 1);
@@ -97,6 +98,117 @@ class AnalyticsService {
 
       await prefs.remove(_sessionKey);
     }
+  }
+
+  /// Track screen transition
+  Future<void> trackScreenTransition(String fromScreen, String toScreen) async {
+    await _logEvent('screen_transition', {
+      'from_screen': fromScreen,
+      'to_screen': toScreen,
+      'timestamp': DateTime.now().toIso8601String(),
+    });
+  }
+
+  /// Track button click
+  Future<void> trackButtonClick(String buttonName, String screenName) async {
+    await _logEvent('button_click', {
+      'button_name': buttonName,
+      'screen_name': screenName,
+      'timestamp': DateTime.now().toIso8601String(),
+    });
+  }
+
+  /// Track form submission
+  Future<void> trackFormSubmission(
+    String formName,
+    bool success, {
+    String? errorMessage,
+  }) async {
+    await _logEvent('form_submission', {
+      'form_name': formName,
+      'success': success,
+      'error_message': errorMessage,
+      'timestamp': DateTime.now().toIso8601String(),
+    });
+  }
+
+  /// Track search query
+  Future<void> trackSearch(String query, int resultsCount) async {
+    await _logEvent('search', {
+      'query_length': query.length,
+      'results_count': resultsCount,
+      'timestamp': DateTime.now().toIso8601String(),
+    });
+  }
+
+  /// Track error occurrence
+  Future<void> trackError(
+    String errorType,
+    String errorMessage, {
+    String? screenName,
+  }) async {
+    await _logEvent('error_occurred', {
+      'error_type': errorType,
+      'error_message': errorMessage,
+      'screen_name': screenName,
+      'timestamp': DateTime.now().toIso8601String(),
+    });
+  }
+
+  /// Track user retention
+  Future<void> trackUserRetention() async {
+    final prefs = await SharedPreferences.getInstance();
+    final firstLaunch = prefs.getString('first_launch_date');
+
+    if (firstLaunch == null) {
+      await prefs.setString(
+        'first_launch_date',
+        DateTime.now().toIso8601String(),
+      );
+    } else {
+      final firstLaunchDate = DateTime.parse(firstLaunch);
+      final daysSinceFirstLaunch = DateTime.now()
+          .difference(firstLaunchDate)
+          .inDays;
+
+      await _logEvent('user_retention', {
+        'days_since_first_launch': daysSinceFirstLaunch,
+        'timestamp': DateTime.now().toIso8601String(),
+      });
+    }
+  }
+
+  /// Get user engagement metrics
+  Future<Map<String, dynamic>> getEngagementMetrics() async {
+    final prefs = await SharedPreferences.getInstance();
+    final metricsJson = prefs.getString(_userMetricsKey);
+    final metrics = metricsJson != null
+        ? jsonDecode(metricsJson) as Map<String, dynamic>
+        : <String, dynamic>{};
+
+    final eventsJson = prefs.getString(_eventsKey);
+    final events = eventsJson != null
+        ? (jsonDecode(eventsJson) as List)
+              .map((e) => e as Map<String, dynamic>)
+              .toList()
+        : <Map<String, dynamic>>[];
+
+    final sessionEvents = events
+        .where((e) => e['event_name'] == 'session_end')
+        .toList();
+    final avgSessionDuration = sessionEvents.isEmpty
+        ? 0
+        : sessionEvents
+                  .map((e) => e['duration_seconds'] as int)
+                  .reduce((a, b) => a + b) /
+              sessionEvents.length;
+
+    return {
+      'total_sessions': metrics['total_sessions'] ?? 0,
+      'avg_session_duration_seconds': avgSessionDuration,
+      'total_expenses_added': metrics['total_expenses_added'] ?? 0,
+      'total_events': events.length,
+    };
   }
 
   /// Track AI performance (categorization accuracy)
